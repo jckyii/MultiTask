@@ -213,8 +213,11 @@ const isWeb = Platform.OS === 'web';
 // Clip gutter the body ScrollView reserves so tour rings can extend past
 // the content without being cut off; the anchors' ringPadX stays below it.
 const RING_GUTTER = 8;
-const FORM_RING_X = 6;
-const FORM_RING_Y = 10;
+// Just enough X to lift the border off the leading letters (the original
+// complaint) while staying visually clear of the sheet's side edges; 6/10
+// overshot into the edges and the Details row above (developer, round 2).
+const FORM_RING_X = 3;
+const FORM_RING_Y = 6;
 
 export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, onSubmit }: Props) {
   const router = useRouter();

@@ -213,7 +213,7 @@ export default function SettingsScreen() {
     // Confirm it plainly - the screen is about to swap to sign-in and a
     // silent swap reads as "did that work?" (developer request 2026-08-17).
     // The toast provider sits above the auth guard, so it survives the swap.
-    toast.show({ message: 'Account deleted. Everything has been removed.' });
+    toast.show({ message: 'Account deleted. Everything has been removed.', placement: 'edge' });
     // The auth user is gone server-side. Local sign-out wipes the device
     // copy (sync db, cache, notifications) through the existing hooks.
     await supabase.auth.signOut();

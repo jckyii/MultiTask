@@ -15,6 +15,10 @@ const TOAST_DURATION_MS = 5000;
 type ToastContent = {
   message: string;
   onUndo?: () => void;
+  /** 'edge' hugs the bottom of the screen - for toasts that outlive the tab
+   *  bar (account deleted lands on the sign-in screen, where the default
+   *  above-bar offset floated mid-air; developer report 2026-08-18). */
+  placement?: 'above-bar' | 'edge';
 };
 
 const UndoToastContext = createContext<{ show: (content: ToastContent) => void }>({
@@ -81,7 +85,9 @@ function Toast({ content, onDismiss }: { content: ToastContent; onDismiss: () =>
           // Clears the tab bar AND the FAB (doc 02: toast sits ABOVE the
           // FAB). The FAB tops out at insets.bottom+24+56=80; below 96 the
           // toast covered its upper half for 5s after every swipe.
-          bottom: insets.bottom + 96,
+          // 'edge' placement hugs the screen bottom instead - for screens
+          // with no tab bar (sign-in after account deletion).
+          bottom: content.placement === 'edge' ? insets.bottom + 16 : insets.bottom + 96,
           backgroundColor: colors.surfaceElevated,
           borderColor: colors.borderSubtle,
           borderRadius: radius.card,
