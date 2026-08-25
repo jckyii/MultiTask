@@ -172,7 +172,9 @@ The part that I'm most proud of was building v2 as a product, not as a demo.
 6. **This involves actual release engineering:** the EAS cloud builds (which are developed on Windows and are deployed to iOS), explicit support for iOS 15.1 (with each pod verified and pinned so that a dependency update fails clearly), an App Store submission package that is ready to paste in and includes accurate privacy labels, and TestFlight rounds with the feedback being sorted into a written backlog—currently in its second round.
 7. **All information is recorded.** Whenever a decision is made, the reasons for it are included in the design documents or the project log. The repository can be understood by a stranger – or by me six months from now.
 
-Note on the tools: During this build I used Claude Code as an AI assistant for programming. All the product decisions, the design system, the architectural choices, and each on-device verification step were my own; it was actually a skill gained from this project to treat an AI agent as a directed engineering tool—one that has written specifications, review checkpoints, and a benchmark it cannot dispute.
+**How this was built:** I designed the product and directed an AI-assisted implementation — the code in this repo was written with Claude Code, an AI coding agent, working under my direction. Every feature began as a specification I wrote first: behaviour, UI states, edge cases, and what not to build, because the project's earliest lesson was that an under-specified requirement makes an AI ship the wrong assumptions. Treating an AI agent as a directed engineering tool — one that gets written specifications, review checkpoints, and a benchmark it cannot dispute — is itself a skill this project taught me.
+
+The hand-written code is in [v1](https://github.com/jckyii/taskmanager): ~4,600 lines of Java I wrote myself as my Computer Programming 12 final project. The two repositories are deliberately different proofs — v1 shows I can write the code; this one shows I can specify, direct, and verify a build several times that size.
 
 *Although the design period may have been short, it does feel as though countless days and nights were spent pondering its design, every little bit of UI, and all of the features. It is safe to say this has been one of the biggest solo projects I have embarked on, and it won't be the last work I create. This has been a personal project of mine, and I do hope that this application will help those in need of a way to manage their time.*
 
@@ -181,10 +183,10 @@ Note on the tools: During this build I used Claude Code as an AI assistant for p
 | | v1 (web, Java) | v2 (this repo) |
 |---|---|---|
 | Timeline | Apr–Jun 2026 | Jul 2026 – present |
-| Code | ~4,600 lines Java (Vaadin/Spring) | ~16,600 lines TypeScript + Swift |
+| Code | ~4,600 lines Java (Vaadin/Spring) | ~14,500 lines TypeScript + 565 lines Swift |
 | Tests | manual | **168 automated (23 suites) + scripted E2E tour** |
 | Commits | 65 (14 PRs) | 183 |
-| Screens/routes | 8 | 21 |
+| Screens/routes | 8 | 19 |
 | Platforms | web | iOS · web/desktop · Android (built) |
 | Database migrations | Hibernate auto-DDL | 13 numbered, hand-run SQL migrations |
 | Design docs | — | 13 documents (~3,600 lines) |
@@ -219,3 +221,7 @@ App Store v1 (in review pipeline) → v1.1 (iPad — the wide layouts are alread
 ## License
 
 All rights reserved. The code is public for reading and evaluation; it isn't licensed for reuse.
+
+## Author
+
+Jack Yi — [github.com/jckyii](https://github.com/jckyii) · [linkedin.com/in/jack-yii](https://www.linkedin.com/in/jack-yii)
