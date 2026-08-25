@@ -141,6 +141,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="updates"
+        options={{
+          title: 'Updates',
+          tabBarLabel: tabLabel('Updates'),
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="sparkles" color={color} />,
+          // A visible tab only on the computer (developer request
+          // 2026-08-18) - phones keep four tabs and reach this from
+          // Settings > Help > What's new (href null hides the button but
+          // the route stays navigable).
+          href: Platform.OS === 'web' ? '/updates' : null,
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',

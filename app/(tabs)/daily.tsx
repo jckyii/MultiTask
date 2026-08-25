@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EventCard } from '@/components/event-card';
 import { SwipeableRow } from '@/components/swipeable-row';
 import { TourAnchor } from '@/components/tour/tour-context';
+import { getTourRecurringId } from '@/lib/tour/events';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { SwipeableTaskCard } from '@/components/swipeable-task-card';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -229,16 +230,21 @@ export default function DailyScreen() {
           <Text style={[type.body, { color: colors.textPrimary }]}>Couldn’t load daily tasks.</Text>
         ) : (
           <View style={{ gap: space.s2 }}>
-            {pendingRecurring.map((task, i) =>
-              // The tour's check-it-off step rings the first open daily.
-              i === 0 ? (
+            {pendingRecurring.map((task, i) => {
+              // The tour's check-it-off step rings the daily the TOUR added
+              // (id tracked through the temp swap); first row is only the
+              // fallback when no tracked id exists (replayed tours).
+              const tourId = getTourRecurringId();
+              const tracked = tourId != null && pendingRecurring.some((t) => t.id === tourId);
+              const ringed = tracked ? task.id === tourId : i === 0;
+              return ringed ? (
                 <TourAnchor key={`anchor-${task.id}`} id="first-daily">
                   {renderRecurringRow(task)}
                 </TourAnchor>
               ) : (
                 renderRecurringRow(task)
-              )
-            )}
+              );
+            })}
 
             {(recurring.data ?? []).length === 0 && (
               <Text style={[type.body, { color: colors.textSecondary }]}>No daily tasks yet.</Text>

@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 import { supabase } from '@/lib/supabase';
 import { newNumericId, newUuid } from '@/lib/sync/ids';
 import { syncDb } from '@/lib/sync/system';
-import { emitTourEvent } from '@/lib/tour/events';
+import { emitTourEvent, getTourRecurringId, setTourRecurringId } from '@/lib/tour/events';
 import { localDateKey } from './calendar';
 
 export type RecurringTask = {
@@ -133,6 +133,9 @@ export function useAddRecurringTask() {
       return { id: row.id, title: row.title, sortOrder: row.sort_order, doneToday: false };
     },
     onMutate: ({ title, sortOrder, tempId }) => {
+      // Track the created row so the tour's check-off step rings IT, not
+      // whichever daily sorts first. Follows the id through the temp swap.
+      setTourRecurringId(tempId);
       emitTourEvent('recurring-added');
       return applyOptimistic(queryClient, (tasks) => [
         ...tasks,
@@ -142,10 +145,12 @@ export function useAddRecurringTask() {
     // Swap the temp row for the real one immediately — until the refetch
     // lands, toggling/archiving the new row would otherwise target the temp
     // id, and a Supabase update matching zero rows "succeeds" silently.
-    onSuccess: (created, { tempId }) =>
+    onSuccess: (created, { tempId }) => {
+      if (getTourRecurringId() === tempId) setTourRecurringId(created.id);
       queryClient.setQueryData<RecurringTask[]>(RECURRING_KEY, (old) =>
         old?.map((t) => (t.id === tempId ? created : t))
-      ),
+      );
+    },
     onError: (_error, _vars, context) => rollback(queryClient, context),
     onSettled: () => settleInvalidate(queryClient),
   });

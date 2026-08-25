@@ -43,3 +43,16 @@ export function setTourTaskId(id: number | null) {
 export function getTourTaskId(): number | null {
   return tourTaskId;
 }
+
+// Same idea for the daily the tour adds — the check-it-off step must ring
+// THAT row, not whichever daily happens to sort first (developer report
+// 2026-08-17: with existing dailies the ring locked onto the top one).
+let tourRecurringId: number | null = null;
+
+export function setTourRecurringId(id: number | null) {
+  tourRecurringId = id;
+}
+
+export function getTourRecurringId(): number | null {
+  return tourRecurringId;
+}

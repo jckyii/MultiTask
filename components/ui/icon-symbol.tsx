@@ -33,6 +33,7 @@ const MAPPING = {
   'gearshape.fill': 'settings',
   magnifyingglass: 'search',
   'tray.and.arrow.down': 'download',
+  sparkles: 'auto-awesome',
   eye: 'visibility',
   'eye.slash': 'visibility-off',
   circle: 'radio-button-unchecked',

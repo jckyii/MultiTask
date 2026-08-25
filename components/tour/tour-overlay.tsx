@@ -38,7 +38,7 @@ export function TourOverlay({ host = 'tabs' }: { host?: TourHost }) {
   const { colors, space, radius, type, monoFont } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const [rect, setRect] = useState<LayoutRectangle | null>(null);
   const [selfRing, setSelfRing] = useState(false);
   // Keyboard-aware card: never hide behind the keyboard (developer report
@@ -261,10 +261,21 @@ export function TourOverlay({ host = 'tabs' }: { host?: TourHost }) {
       ? rect.y + rect.height / 2 > usableHeight / 2
       : step.placement === 'top';
   const bottomOffset = keyboardHeight > 0 ? keyboardHeight + 12 : 96;
+  // Wide web, quick-add steps: the sheet is a centered 560pt dialog, so the
+  // card moves into the LEFT gutter beside it instead of overlapping the
+  // form (developer request 2026-08-17) — but only when the gutter is
+  // actually wide enough to hold a readable card.
+  const gutterWidth = (windowWidth - 560) / 2 - 48;
+  const asideWidth = Math.min(420, gutterWidth);
+  const wideAside = Platform.OS === 'web' && host === 'quick-add' && asideWidth >= 280;
   const holder = (
     <View
       pointerEvents="box-none"
-      style={[styles.cardHolder, placeTop ? styles.holderTop : { bottom: bottomOffset }]}>
+      style={
+        wideAside
+          ? [styles.cardHolder, { left: 24, right: undefined, width: asideWidth, top: 0, bottom: 0, justifyContent: 'center' }]
+          : [styles.cardHolder, placeTop ? styles.holderTop : { bottom: bottomOffset }]
+      }>
       {card}
     </View>
   );

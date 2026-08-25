@@ -295,8 +295,25 @@ export default function CalendarScreen() {
           styles.dayCell,
           { height: dayCellHeight, borderColor: colors.borderSubtle },
           isWide && styles.dayCellWide,
-          hasOverdue && { backgroundColor: colors.statusOverdueBg, borderRadius: 8 },
         ]}>
+        {/* Overdue tint as an INSET layer, not a cell background — full-bleed
+            fills on adjacent days merged into one red blob (developer report
+            2026-08-18). Absolute inset keeps the fixed grid geometry (scroll
+            math) untouched. */}
+        {hasOverdue && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: 2,
+              bottom: 2,
+              left: 2,
+              right: 2,
+              backgroundColor: colors.statusOverdueBg,
+              borderRadius: 8,
+            }}
+          />
+        )}
         <View style={[styles.dayNumberWrap, isToday && { backgroundColor: colors.accent, borderRadius: 999 }]}>
           {/* Only the CURRENT month's days are full-color; every other
               month's days are greyed (developer pick — orientation while

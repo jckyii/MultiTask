@@ -463,6 +463,7 @@ export default function SettingsScreen() {
         {sectionTitle('Help')}
         {actionRow('Replay the tour', () => tour.start())}
         {actionRow('How to use Multitask', () => router.push('/guide'))}
+        {actionRow('What’s new', () => router.push('/updates'))}
         {actionRow('Support', () => router.push('/support'))}
         {actionRow('Privacy policy', () => router.push('/privacy'))}
         {actionRow('Terms of service', () => router.push('/terms'))}
