@@ -720,7 +720,11 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                   strike through them (developer rounds 1-3). */}
               <View style={{ gap: space.s2 }}>
               <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Priority</Text>
-              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-priority">
+              {/* flex-start: the ring shrink-wraps the chips instead of
+                  spanning the sheet and kissing its side edges (developer
+                  round 4). Creator rows need full width, so category and
+                  subject stretch only while their creator is open. */}
+              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-priority" style={{ alignSelf: 'flex-start' }}>
               <View style={[styles.wrapRow, { gap: space.s2 }]}>
                 <SelectChip label="None" selected={priority == null} onPress={() => setPriorityValue(null)} />
                 {[1, 2, 3].map((tier) => (
@@ -737,7 +741,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
 
               <View style={{ gap: space.s2 }}>
               <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Category</Text>
-              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-category">
+              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-category" style={creating === 'category' ? undefined : { alignSelf: 'flex-start' }}>
               <View style={[styles.wrapRow, { gap: space.s2 }]}>
                 {categories.map((c) => (
                   <SelectChip
@@ -771,7 +775,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
 
               <View style={{ gap: space.s2 }}>
               <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Subject</Text>
-              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-subject">
+              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-subject" style={creating === 'subject' ? undefined : { alignSelf: 'flex-start' }}>
               <View style={[styles.wrapRow, { gap: space.s2 }]}>
                 {subjects.map((s) => (
                   <SelectChip
