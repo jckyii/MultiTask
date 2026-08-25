@@ -19,7 +19,11 @@ export function CollapsibleReveal({ open, children }: PropsWithChildren<{ open: 
   const style = useAnimatedStyle(() => ({
     height: contentHeight.value * progress.value,
     opacity: progress.value,
-    overflow: 'hidden',
+    // Clip only while animating. At rest-open the clip box was the
+    // "invisible border" chopping the tour rings inside the Details section
+    // (developer round 5, 2026-08-25) — fully open there is nothing to clip,
+    // so let the rings breathe.
+    overflow: progress.value >= 1 ? 'visible' : 'hidden',
   }));
 
   return (

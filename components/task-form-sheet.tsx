@@ -218,7 +218,7 @@ const RING_GUTTER = 8;
 // shrink it and it strikes the label. So the field labels now live OUTSIDE
 // the anchors (the ring wraps only the chips/input, like the date chips
 // ring) and the pads stay small.
-const FORM_RING_X = 3;
+const FORM_RING_X = 6;
 const FORM_RING_Y = 3;
 
 export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, onSubmit }: Props) {
