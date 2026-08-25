@@ -1,6 +1,6 @@
 # Multitask
 
-**Multitask is an offline task manager that is available on a number of platforms and represents the second generation of the application which I have been developing and running since April 2026.**
+**Multitask is an offline task manager that is available on a number of platforms and represents the second generation of the application which I have been developing and running since February 2026.**
 
 iOS (TestFlight, App Store submission in progress) · Web/desktop (deployed from this repo) · Android (builds green, Play release planned for v2)
 
@@ -31,7 +31,7 @@ V2 is a completely new native version of the application, based on the same data
 
 ## Why a v2 exists
 
-I developed the first version (from April to June 2026: using Java 24, Spring Boot 4, Vaadin Flow, Supabase Postgres, and deploying it on Render: 65 commits and 14 pull requests) and used it every day. Three limits became apparent:
+I developed the first version (from February to June 2026: using Java 24, Spring Boot 4, Vaadin Flow, Supabase Postgres, and deploying it on Render: 65 commits and 14 pull requests) and used it every day. Three limits became apparent:
 
 1. **It functioned only when used over the internet**; with a server-rendered user interface, there would be no tasks if there was no connection.
 2. **The framework placed limitations on the design**; although Vaadin is productive it is design-restrictive since the kinds of interactions I wanted (swipe gestures, physical motion, one-hand quick capture) could not be achieved.
