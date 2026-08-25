@@ -213,11 +213,13 @@ const isWeb = Platform.OS === 'web';
 // Clip gutter the body ScrollView reserves so tour rings can extend past
 // the content without being cut off; the anchors' ringPadX stays below it.
 const RING_GUTTER = 8;
-// Just enough X to lift the border off the leading letters (the original
-// complaint) while staying visually clear of the sheet's side edges; 6/10
-// overshot into the edges and the Details row above (developer, round 2).
+// Round 3 (developer screenshot 2026-08-25): no padding value works while
+// the LABEL sits inside the ring - grow it and the line hits the row above,
+// shrink it and it strikes the label. So the field labels now live OUTSIDE
+// the anchors (the ring wraps only the chips/input, like the date chips
+// ring) and the pads stay small.
 const FORM_RING_X = 3;
-const FORM_RING_Y = 6;
+const FORM_RING_Y = 3;
 
 export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, onSubmit }: Props) {
   const router = useRouter();
@@ -714,8 +716,11 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
 
           <CollapsibleReveal open={detailsOpen}>
             <View style={{ gap: space.s3, paddingTop: space.s2 }}>
-              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-priority">
+              {/* Labels sit OUTSIDE the tour anchors so the ring can never
+                  strike through them (developer rounds 1-3). */}
+              <View style={{ gap: space.s2 }}>
               <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Priority</Text>
+              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-priority">
               <View style={[styles.wrapRow, { gap: space.s2 }]}>
                 <SelectChip label="None" selected={priority == null} onPress={() => setPriorityValue(null)} />
                 {[1, 2, 3].map((tier) => (
@@ -728,9 +733,11 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                 ))}
               </View>
               </TourAnchor>
+              </View>
 
-              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-category">
+              <View style={{ gap: space.s2 }}>
               <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Category</Text>
+              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-category">
               <View style={[styles.wrapRow, { gap: space.s2 }]}>
                 {categories.map((c) => (
                   <SelectChip
@@ -760,9 +767,11 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                 />
               )}
               </TourAnchor>
+              </View>
 
-              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-subject">
+              <View style={{ gap: space.s2 }}>
               <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Subject</Text>
+              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-subject">
               <View style={[styles.wrapRow, { gap: space.s2 }]}>
                 {subjects.map((s) => (
                   <SelectChip
@@ -792,9 +801,11 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                 />
               )}
               </TourAnchor>
+              </View>
 
-              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-notes">
+              <View style={{ gap: space.s2 }}>
               <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Description</Text>
+              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-notes">
               <TextInput
                 style={[
                   styles.descriptionInput,
@@ -803,7 +814,6 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                     borderRadius: radius.button,
                     color: colors.textPrimary,
                     padding: space.s3,
-                    marginTop: space.s2,
                   },
                 ]}
                 placeholder="Optional notes"
@@ -814,6 +824,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                 multiline
               />
               </TourAnchor>
+              </View>
             </View>
           </CollapsibleReveal>
         </ScrollView>

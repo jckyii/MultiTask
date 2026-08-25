@@ -262,9 +262,9 @@ export function TourOverlay({ host = 'tabs' }: { host?: TourHost }) {
       : step.placement === 'top';
   const bottomOffset = keyboardHeight > 0 ? keyboardHeight + 12 : 96;
   // Wide web, quick-add steps: the sheet is a centered 560pt dialog, so the
-  // card moves into the LEFT gutter beside it instead of overlapping the
-  // form (developer request 2026-08-17) — but only when the gutter is
-  // actually wide enough to hold a readable card.
+  // card moves into the RIGHT gutter beside it instead of overlapping the
+  // form (developer request; right side confirmed 2026-08-25) — but only
+  // when the gutter is actually wide enough to hold a readable card.
   const gutterWidth = (windowWidth - 560) / 2 - 48;
   const asideWidth = Math.min(420, gutterWidth);
   const wideAside = Platform.OS === 'web' && host === 'quick-add' && asideWidth >= 280;
@@ -273,7 +273,10 @@ export function TourOverlay({ host = 'tabs' }: { host?: TourHost }) {
       pointerEvents="box-none"
       style={
         wideAside
-          ? [styles.cardHolder, { left: 24, right: undefined, width: asideWidth, top: 0, bottom: 0, justifyContent: 'center' }]
+          ? // Own style, NOT an override of cardHolder: `left: undefined` in
+            // a later array entry does not clear the base left:16, and
+            // left+width beats right (the card silently stayed left).
+            [styles.cardHolderAside, { right: 24, width: asideWidth }]
           : [styles.cardHolder, placeTop ? styles.holderTop : { bottom: bottomOffset }]
       }>
       {card}
@@ -327,6 +330,13 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     alignItems: 'center',
+  },
+  cardHolderAside: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'stretch',
   },
   holderTop: { top: 64 },
   holderBottom: { bottom: 96 },
