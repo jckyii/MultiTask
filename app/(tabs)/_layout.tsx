@@ -20,10 +20,6 @@ import { useWidgetSnapshot } from '@/hooks/use-widget-snapshot';
 import { useTheme } from '@/lib/theme/use-theme';
 
 const TAB_ORDER = ['/', '/daily', '/calendar', '/settings'] as const;
-// Screen-EDGE strips where the tab swipe recognizes — the middle of the
-// screen belongs to the task-card swipes (developer request 2026-08-11:
-// swipe between pages without breaking card gestures).
-const EDGE = 32;
 
 /** Runs inside TourProvider (mounted at the root) so the first-run hook can
  *  start the tour. */
@@ -90,30 +86,29 @@ export default function TabLayout() {
   // 'material' variant for side positions.
   const sideNav = Platform.OS === 'web' && width >= 1024;
 
-  // Edge-swipe between tabs: a pan that only recognizes in the outer EDGE
-  // strips (hitSlop shrinks the active area), so task-card swipes in the
-  // middle of the screen never fight it.
+  // FULL-SURFACE swipe between tabs (developer request 2026-08-17: "swipe
+  // anywhere that doesn't have a swipe action" — was edge-strips only).
+  // Deconfliction is by ACTIVATION DISTANCE, not by zones: everything that
+  // owns a horizontal gesture (task/recurring card swipes, the week and day
+  // pagers) activates at ±16, this pan not until ±48 — so on their surface
+  // they always claim the gesture first and this one is cancelled, while on
+  // free surface (Settings, month grid, headers, blank space) nothing
+  // competes and the tab pan wins. failOffsetY keeps vertical scrolling
+  // untouched: 16px of vertical travel fails the pan long before 48px of
+  // horizontal can arm it.
   function goNeighbor(direction: 1 | -1) {
     const current = TAB_ORDER.indexOf(pathname as (typeof TAB_ORDER)[number]);
     if (current < 0) return;
     const next = TAB_ORDER[current + direction];
     if (next) router.navigate(next);
   }
-  const fromRightEdge = Gesture.Pan()
-    .hitSlop({ left: -(width - EDGE) })
-    .activeOffsetX([-20, 20])
-    .failOffsetY([-14, 14])
+  const tabSwipe = Gesture.Pan()
+    .activeOffsetX([-48, 48])
+    .failOffsetY([-16, 16])
     .onEnd((event) => {
-      if (event.translationX < -40) runOnJS(goNeighbor)(1);
+      if (event.translationX < -56) runOnJS(goNeighbor)(1);
+      else if (event.translationX > 56) runOnJS(goNeighbor)(-1);
     });
-  const fromLeftEdge = Gesture.Pan()
-    .hitSlop({ right: -(width - EDGE) })
-    .activeOffsetX([-20, 20])
-    .failOffsetY([-14, 14])
-    .onEnd((event) => {
-      if (event.translationX > 40) runOnJS(goNeighbor)(-1);
-    });
-  const tabSwipe = Gesture.Race(fromRightEdge, fromLeftEdge);
 
   return (
     <>
