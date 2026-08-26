@@ -218,3 +218,125 @@ Upload in that order; the first two are what most people ever see.
 | **2.1** reviewer cannot get in | Low | The demo account is verified. Keep it alive. |
 | **4.2** minimum functionality | Very low | It is a complete app with widgets, Siri, offline sync and import. |
 | **2.3.10** screenshots showing non-app content | Very low | Every screenshot is the real app on real data. |
+
+---
+
+## 8. Guideline 2.1 "Information Needed" — the reply (rejection of 2026-08-26)
+
+Apple's extra-scrutiny pass for first submissions from new accounts. Nothing
+in the app was found wrong; they want a demo video and written answers.
+Decision: fold the v1.1 batch into the resubmission (marketing version stays
+1.0.0, build number auto-increments) and answer everything at once.
+
+Paste items 2–7 below into the reply in App Store Connect (Resolution
+Center) AND into App Review Information > Notes for future submissions.
+
+### Item 1 — the screen recording (developer records this, on the iPhone)
+
+Control Center > Screen Recording, latest iOS, one continuous take, no
+editing needed. Apple watches for the exact flows they listed. Shot list:
+
+1. Launch the app cold (show the app icon being tapped).
+2. Sign OUT if signed in, then SIGN UP with a throwaway email (e.g.
+   yijack56+asc.demo@gmail.com) — show the confirmation email arriving in
+   Mail, tap the link, land on the confirmed page, return to the app,
+   sign in. The first-run tour will start — do 3 or 4 steps, then End tour
+   (shows onboarding exists without a 5-minute video).
+3. When the notification permission prompt appears, tap Allow (that is a
+   "sensitive capability prompt" — they want to see it in the flow).
+4. Create a task with quick-add (title + time), swipe right to complete,
+   swipe left to delete another, tap Undo once.
+5. Daily tab: check off a daily task.
+6. Calendar: month view, tap a day, show the day timeline, back out.
+7. Settings: show the urgency threshold chips, toggle dark mode.
+8. Settings > Delete account: delete the THROWAWAY account made in step 2
+   (both confirms, the banner, landing back on sign-in). Never the demo
+   account.
+
+Upload the video in the Resolution Center reply (attachments allowed) or a
+link. Keep it under ~4 minutes.
+
+### Item 2 — devices and OS tested (fill in the exact model/OS)
+
+```
+iPhone [MODEL], iOS [VERSION] — physical device, via TestFlight and ad hoc
+development builds throughout development.
+Web companion (same account system) tested on desktop Chrome, macOS/Windows.
+```
+
+### Item 3 — function, audience, problem, value
+
+```
+Multitask Manager is a personal task manager for people who use one every
+day: students and working professionals tracking deadlines. The problem it
+solves is fragmentation: tasks, repeating daily routines, and imported
+schedule events live in one place, are visible at a glance by urgency
+(each task's card changes color and icon as its deadline approaches), and
+follow the user across their iPhone and the web app through one account.
+It works fully offline; changes sync when a connection returns. It is
+free, with no ads, no purchases, and no tracking.
+```
+
+### Item 4 — setup instructions and credentials
+
+```
+The app requires sign-in because cross-device sync is its core purpose.
+
+Demo account (also in the App Review Information credentials fields):
+  Email:    multitask.uitest.claude@gmail.com
+  Password: uitest-2026-multitask
+
+Steps: launch the app, sign in with the demo account, and the task list
+is immediately populated with sample tasks. Quick-add is the + button
+(title and time only). Swipe a task right to complete, left to delete.
+The Daily tab holds repeating daily tasks. The Calendar tab zooms from
+year to month to a single day. CSV import lives in the Calendar tab's
+tray icon; a sample CSV can be generated from the in-app "How do I make
+a CSV" helper. Account deletion is at the bottom of Settings.
+
+No sample files are required; all features work with the demo account as
+provided.
+```
+
+### Item 5 — external services
+
+```
+- Supabase (supabase.com): authentication (email/password) and the
+  Postgres database that stores each user's tasks, events, and settings,
+  protected by row-level security.
+- PowerSync (powersync.com): offline-first synchronization between the
+  on-device SQLite database and Postgres.
+- Sentry (sentry.io): crash reporting only. Reports are anonymized (no
+  user identity, no user content) and are declared as Crash Data not
+  linked to identity in App Privacy.
+- Render (render.com): hosts the companion web app and the public
+  support/privacy/terms pages.
+No payment processors, no ad networks, no analytics SDKs, no AI services.
+```
+
+### Item 6 — regional differences
+
+```
+None. The app's features and content are identical in all regions. All
+dates and times use the device's locale and time zone.
+```
+
+### Item 7 — regulated industry / protected material
+
+```
+Not applicable. The app is a general-purpose personal task manager. It
+operates in no regulated industry and contains no third-party protected
+material; all content is created by the user or the developer.
+```
+
+### Resubmission checklist
+
+- [ ] v1.1 batch merged and verified on the preview build
+- [ ] Production build (`npx eas build --platform ios --profile production`)
+- [ ] `npx eas submit --platform ios --latest`
+- [ ] On the version page: select the NEW build
+- [ ] Paste items 2–7 into App Review Information > Notes (keep the
+      existing why-sign-in-is-required note too)
+- [ ] Record the video per item 1, attach it in the Resolution Center
+      reply, paste items 2–7 there as well
+- [ ] Submit for review
