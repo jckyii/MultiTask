@@ -102,11 +102,14 @@ export const lightColors: ThemeColors = {
   // of 4.5. Dark-mode accent is unchanged (already lightened + approved).
   accent: '#4954C7',
   accentMuted: 'rgba(73, 84, 199, 0.12)',
-  statusOngoingBg: '#F0FDF4', // carried from the web app
+  // One saturation step up from the web-app originals (F0FDF4/FFF7ED/FEF2F2
+  // — the 50-level tints): "too opaque, give it just a bit more colour" in
+  // light mode (developer, TestFlight 2026-08-17). Same hue family, 100s.
+  statusOngoingBg: '#DCFCE7',
   statusOngoingAccent: '#16A34A',
-  statusUrgentBg: '#FFF7ED',
+  statusUrgentBg: '#FFEDD5',
   statusUrgentAccent: '#EA580C',
-  statusOverdueBg: '#FEF2F2',
+  statusOverdueBg: '#FEE2E2',
   statusOverdueAccent: '#DC2626',
   statusEventAccent: '#2563EB',
 };

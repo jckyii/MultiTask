@@ -1,8 +1,10 @@
 import { Tabs, usePathname, useRouter } from 'expo-router';
-import React from 'react';
-import { Platform, Text, useWindowDimensions, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Platform, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
+
+import { isReduceMotionEnabled } from '@/lib/reduced-motion';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -31,18 +33,35 @@ function FirstRunTour() {
 }
 
 /** Tab label with an underline on the active tab (developer request:
- *  make it clearer which page you are on). */
+ *  make it clearer which page you are on). The line EXPANDS OUTWARD from
+ *  the center when a tab becomes active (developer request 2026-08-17) —
+ *  scaleX from 0, instant under reduced motion. */
 function tabLabel(title: string) {
   return function TabLabel({ focused, color }: { focused: boolean; color: string }) {
+    const grow = useRef(new Animated.Value(focused ? 1 : 0)).current;
+    useEffect(() => {
+      if (isReduceMotionEnabled()) {
+        grow.setValue(focused ? 1 : 0);
+        return;
+      }
+      Animated.timing(grow, {
+        toValue: focused ? 1 : 0,
+        duration: 180,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }, [focused, grow]);
     return (
       <View style={{ alignItems: 'center', gap: 2 }}>
         <Text style={{ fontSize: 10, fontWeight: focused ? '700' : '400', color }}>{title}</Text>
-        <View
+        <Animated.View
           style={{
             height: 2,
             borderRadius: 1,
             alignSelf: 'stretch',
-            backgroundColor: focused ? color : 'transparent',
+            backgroundColor: color,
+            opacity: grow,
+            transform: [{ scaleX: grow }],
           }}
         />
       </View>

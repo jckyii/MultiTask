@@ -356,7 +356,14 @@ export default function TaskListScreen() {
             ) : null
           }
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[pageContent, { paddingHorizontal: space.s4, paddingBottom: insets.bottom + space.s6 }]}
+          // flexGrow: with few tasks the content container used to end where
+          // the cards ended, so dragging the blank lower half of the screen
+          // did nothing (developer report 2026-08-17). Filling the viewport
+          // makes every drag - and the pull-to-reveal search - work from
+          // anywhere. alwaysBounceVertical keeps the iOS overscroll alive
+          // even when content is shorter than the screen.
+          contentContainerStyle={[pageContent, { flexGrow: 1, paddingHorizontal: space.s4, paddingBottom: insets.bottom + space.s6 }]}
+          alwaysBounceVertical
           renderSectionHeader={({ section }) =>
             section.key === 'completed' || section.key === 'deleted' ? (
               renderCollapsibleHeader(section.key)

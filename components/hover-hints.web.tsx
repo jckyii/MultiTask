@@ -17,7 +17,10 @@ import { useTheme } from '@/lib/theme/use-theme';
 
 const SELECTOR = '[role="button"][aria-label], [role="link"][aria-label], a[aria-label], button[aria-label]';
 const SHOW_DELAY_MS = 450;
-const MAX_TARGET_W = 400;
+// Tight enough that task cards never qualify even in a 390pt window
+// (cards there are ~358 wide and slipped under a 400 guard - caught in the
+// v1.1 sanity pass); every genuine control is far smaller.
+const MAX_TARGET_W = 320;
 const MAX_TARGET_H = 160;
 
 export function HoverHints() {

@@ -15,8 +15,11 @@ export function animateListChanges() {
   LayoutAnimation.configureNext({
     duration: 280,
     create: { type: 'easeInEaseOut', property: 'opacity', duration: 200, delay: 80 },
-    // High damping — surrounding rows settle into place quickly, no sway.
-    update: { type: 'spring', springDamping: 0.95 },
+    // Plain ease, no spring: even at 0.95 damping the residual overshoot
+    // made the Completed/Deleted section banners visibly wobble on every
+    // regroup - "too disturbing", tone to basically none (developer,
+    // TestFlight 2026-08-17). Rows still glide, they just don't sway.
+    update: { type: 'easeInEaseOut' },
     delete: { type: 'easeInEaseOut', property: 'opacity', duration: 150 },
   });
 }
