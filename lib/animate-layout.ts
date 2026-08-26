@@ -14,7 +14,10 @@ export function animateListChanges() {
   if (isReduceMotionEnabled()) return;
   LayoutAnimation.configureNext({
     duration: 280,
-    create: { type: 'easeInEaseOut', property: 'opacity', duration: 200, delay: 80 },
+    // Slow, late fade-in: appearing banners/rows materialize gently after
+    // the glide has mostly settled ("way too fast" at 200/80 - developer,
+    // dev-server review 2026-08-26).
+    create: { type: 'easeInEaseOut', property: 'opacity', duration: 420, delay: 160 },
     // Plain ease, no spring: even at 0.95 damping the residual overshoot
     // made the Completed/Deleted section banners visibly wobble on every
     // regroup - "too disturbing", tone to basically none (developer,
