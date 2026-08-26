@@ -23,6 +23,24 @@ const MAX_TARGET_H = 160;
 export function HoverHints() {
   const { colors, monoFont } = useTheme();
 
+  // Tab hover scale (developer request 2026-08-25, the Updates tab; applied
+  // to every tab for consistency). CSS because the side rail renders bare
+  // <a role="tab"> links - React Navigation's material variant never mounts
+  // tabBarButton there, so no component wrapper can reach them. Hover-only
+  // media query keeps touch untouched; reduced-motion users get no scale.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const style = document.createElement('style');
+    style.textContent = `
+      a[role="tab"] { transition: transform 150ms ease-out; }
+      @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+        a[role="tab"]:hover { transform: scale(1.08); }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, []);
+
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
