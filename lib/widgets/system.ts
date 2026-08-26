@@ -5,12 +5,14 @@
 // and the app runs on. iOS-only by nature.
 import { Platform } from 'react-native';
 
+import { isExpoGo } from '@/lib/sync/system';
+
 export const APP_GROUP = 'group.com.abuljean.multitask';
 const SNAPSHOT_KEY = 'widget.snapshot';
 const PENDING_KEY = 'widget.pendingCompletions';
 
 export async function writeWidgetSnapshot(payload: unknown): Promise<boolean> {
-  if (Platform.OS !== 'ios') return false;
+  if (Platform.OS !== 'ios' || isExpoGo) return false;
   try {
     const { ExtensionStorage } = await import('@bacons/apple-targets');
     const storage = new ExtensionStorage(APP_GROUP);
@@ -29,7 +31,7 @@ export type PendingToggle = { id: number; done: boolean };
  *  un-complete. Read-and-clear; the caller runs them through the normal
  *  mutation path. Tolerates the legacy plain-number format (= complete). */
 export async function drainPendingToggles(): Promise<PendingToggle[]> {
-  if (Platform.OS !== 'ios') return [];
+  if (Platform.OS !== 'ios' || isExpoGo) return [];
   try {
     const { ExtensionStorage } = await import('@bacons/apple-targets');
     const storage = new ExtensionStorage(APP_GROUP);

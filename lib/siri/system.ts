@@ -3,6 +3,8 @@
 // target's Control). Same ExtensionStorage gateway as the widget queues.
 import { Platform } from 'react-native';
 
+import { isExpoGo } from '@/lib/sync/system';
+
 const APP_GROUP = 'group.com.abuljean.multitask';
 const PENDING_TASKS_KEY = 'siri.pendingTasks';
 const OPEN_QUICK_ADD_KEY = 'siri.openQuickAdd';
@@ -12,7 +14,7 @@ export type SiriPendingTask = { title: string };
 /** Tasks queued by "Add a task in Multitask" while the app was away.
  *  Read-and-clear; caller creates them through the normal mutation path. */
 export async function drainSiriTasks(): Promise<SiriPendingTask[]> {
-  if (Platform.OS !== 'ios') return [];
+  if (Platform.OS !== 'ios' || isExpoGo) return [];
   try {
     const { ExtensionStorage } = await import('@bacons/apple-targets');
     const storage = new ExtensionStorage(APP_GROUP);
@@ -30,7 +32,7 @@ export async function drainSiriTasks(): Promise<SiriPendingTask[]> {
 
 /** True once if "Quick add" (Siri or Control Center) asked to open the sheet. */
 export async function consumeQuickAddRequest(): Promise<boolean> {
-  if (Platform.OS !== 'ios') return false;
+  if (Platform.OS !== 'ios' || isExpoGo) return false;
   try {
     const { ExtensionStorage } = await import('@bacons/apple-targets');
     const storage = new ExtensionStorage(APP_GROUP);

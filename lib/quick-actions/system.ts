@@ -7,12 +7,16 @@
 // app runs on.
 import { Platform } from 'react-native';
 
+import { isExpoGo } from '@/lib/sync/system';
+
 let subscription: { remove: () => void } | null = null;
 
 /** Register the "Quick add" action and route action presses (warm + cold
  *  start) through the supplied navigator. Returns availability. */
 export async function initQuickActions(navigate: (href: string) => void): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
+  // Expo Go lacks the native module, and dev's lazy module loading redboxes
+  // on a throwing import even inside try/catch - never attempt it there.
+  if (Platform.OS === 'web' || isExpoGo) return false;
   try {
     const QuickActions = await import('expo-quick-actions');
 

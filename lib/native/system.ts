@@ -4,6 +4,7 @@
 // iOS-only by nature.
 import { Platform } from 'react-native';
 
+import { isExpoGo } from '@/lib/sync/system';
 import type { SpotlightTask } from '@/modules/multitask-native';
 
 type NativeModule = typeof import('@/modules/multitask-native').default;
@@ -12,6 +13,11 @@ let cached: NativeModule | null | undefined;
 
 async function nativeModule(): Promise<NativeModule | null> {
   if (Platform.OS !== 'ios') return null;
+  // Expo Go can NEVER have the module, and in dev Metro lazy-loads the
+  // import over the wire - a module that throws during evaluation redboxes
+  // even though the await is try/caught (developer hit 2026-08-26). Don't
+  // even attempt the import there.
+  if (isExpoGo) return (cached = null);
   if (cached !== undefined) return cached;
   try {
     cached = (await import('@/modules/multitask-native')).default;
