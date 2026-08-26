@@ -100,6 +100,11 @@ export function SearchFilterBar({ filters, onChange, panelOpen, onTogglePanel, c
           onPress={onTogglePanel}
           accessibilityRole="button"
           accessibilityState={{ expanded: panelOpen }}
+          accessibilityLabel={
+            panelOpen
+              ? 'Hide the urgency, category, and subject filters'
+              : 'Filter tasks by urgency, category, or subject'
+          }
           style={[styles.filterButton, { gap: 2 }]}>
           <Text style={[type.body, { color: colors.accent }]}>Filter</Text>
           <IconSymbol name={panelOpen ? 'chevron.down' : 'chevron.right'} size={13} color={colors.accent} />

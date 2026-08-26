@@ -8,6 +8,7 @@ import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
+import { HoverHints } from '@/components/hover-hints';
 import { SyncBridge } from '@/components/sync-bridge';
 import { TourProvider } from '@/components/tour/tour-context';
 import { TourOverlay } from '@/components/tour/tour-overlay';
@@ -144,6 +145,8 @@ function ThemedApp() {
           <RootNavigator />
           <TourOverlay />
         </TourProvider>
+        {/* Desktop hover hints — web-only (native file is a no-op). */}
+        <HoverHints />
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       </UndoToastProvider>
     </ThemeProvider>
