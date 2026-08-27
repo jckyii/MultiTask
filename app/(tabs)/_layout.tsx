@@ -128,10 +128,12 @@ export default function TabLayout() {
     <View style={{ flex: 1 }} collapsable={false}>
     <TabPagerProvider dragX={dragX}>
     <Tabs
-      // Keep inactive tab screens ATTACHED: detaching/reattaching the
-      // calendar's native tree on every focus change was the tab-switch
-      // hitch (developer, 2026-08-26). Five screens' memory is cheap.
-      detachInactiveScreens={false}
+      // NEVER set detachInactiveScreens={false} here: with detachment off,
+      // inactive screens stay stacked INVISIBLY over the active one and
+      // steal its touches — mid-screen swipes were hitting the hidden Daily
+      // screen's first row, and card swipes died (developer, 2026-08-26).
+      // Tab-switch cost is handled by the calendar's tight list windowing
+      // instead.
       screenOptions={{
         // Token accent, NOT the Expo template's teal — the active tab is the
         // most-seen accent in the app and must match the brand color.
