@@ -22,6 +22,8 @@ import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming
 
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { TabPage } from '@/components/tab-pager';
+import { WeekGrid } from '@/components/week-grid';
+import { useCollapsedSection } from '@/hooks/use-collapsed-section';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { TourAnchor, useTourAnchor } from '@/components/tour/tour-context';
 import { usePageSlide } from '@/hooks/use-page-slide';
@@ -98,6 +100,9 @@ export default function CalendarScreen() {
   const todayKey = localDateKey(today);
   // Grid ⇄ week-list toggle (developer request 2026-08-02).
   const [weekView, setWeekView] = useState(false);
+  // Week FORMAT (developer spec 2026-08-18): scroll list (the original) or
+  // the Google-Calendar-style time grid. Persisted; true = list (default).
+  const [weekListFormat, toggleWeekFormat] = useCollapsedSection('ui.weekListFormat');
   const [weekOffset, setWeekOffset] = useState(0);
   // Tapping the week range opens a jump-to-week picker (developer request
   // 2026-08-02). It opens SCROLLED TO the week you're viewing — not the top
@@ -562,19 +567,36 @@ export default function CalendarScreen() {
               imports" step rings both). */}
           <TourAnchor id="calendar-tools">
             <View style={styles.topBarActions}>
-              {/* Grid ⇄ week-list toggle (developer request 2026-08-02). */}
+              {/* Week view ⇄ month (developer request 2026-08-02). */}
               <Pressable
                 onPress={() => setWeekView((w) => !w)}
                 hitSlop={10}
                 accessibilityRole="button"
                 accessibilityState={{ selected: weekView }}
-                accessibilityLabel={weekView ? 'Show month grid' : 'Show week list'}>
+                accessibilityLabel={weekView ? 'Show month grid' : 'Show week view'}>
                 <IconSymbol
                   name={weekView ? 'calendar' : 'calendar.day.timeline.left'}
                   size={24}
                   color={colors.accent}
                 />
               </Pressable>
+              {/* Week FORMAT toggle — only while week view is active
+                  (developer spec 2026-08-18). */}
+              {weekView && (
+                <Pressable
+                  onPress={toggleWeekFormat}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    weekListFormat ? 'Show the week as a time grid' : 'Show the week as a list'
+                  }>
+                  <IconSymbol
+                    name={weekListFormat ? 'square.grid.2x2' : 'list.bullet'}
+                    size={24}
+                    color={colors.accent}
+                  />
+                </Pressable>
+              )}
               <Pressable
                 onPress={() => router.push('/add-event')}
                 hitSlop={10}
@@ -665,13 +687,8 @@ export default function CalendarScreen() {
     const first = days[0];
     const last = days[6];
     const rangeLabel = `${first.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${last.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
-    return (
-      <GestureDetector gesture={weekSwipe}>
-      <Animated.View nativeID="week-pager" style={[styles.zoomContainer, weekPager.style]}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[pageContent, { paddingHorizontal: space.s4, paddingBottom: insets.bottom + space.s6 }]}>
-        <View style={[styles.weekNav, { paddingVertical: space.s2 }]}>
+    const weekNav = (
+      <View style={[styles.weekNav, { paddingVertical: space.s2 }]}>
           <Pressable
             onPress={() => goToWeek(-1)}
             hitSlop={10}
@@ -695,6 +712,50 @@ export default function CalendarScreen() {
             <IconSymbol name="chevron.right" size={20} color={colors.accent} />
           </Pressable>
         </View>
+    );
+
+    // The GRID format (developer spec 2026-08-18): Google-Calendar-style 7
+    // columns over a shared time axis. It scrolls itself, so it lives
+    // OUTSIDE any ScrollView; the swipe pager wraps both formats.
+    if (!weekListFormat) {
+      return (
+        <GestureDetector gesture={weekSwipe}>
+        <Animated.View nativeID="week-pager" style={[styles.zoomContainer, weekPager.style]}>
+          <View style={[styles.zoomContainer, pageContent, { paddingHorizontal: space.s4 }]}>
+            {weekNav}
+            <WeekGrid
+              days={days}
+              tasksByDayKey={byDay}
+              eventsByDayKey={eventDays}
+              todayKey={todayKey}
+              urgencyThresholdHours={urgencyThresholdHours}
+              isWide={isWide}
+              onPressTask={(id) => router.push({ pathname: '/task/[id]', params: { id: String(id) } })}
+              onPressEvent={(id) => router.push({ pathname: '/event/[id]', params: { id: String(id) } })}
+              onPressDay={(date, pageX, pageY) =>
+                router.push({
+                  pathname: '/day/[date]',
+                  params: {
+                    date: localDateKey(date),
+                    ax: String(Math.round(pageX)),
+                    ay: String(Math.round(pageY)),
+                  },
+                })
+              }
+            />
+          </View>
+        </Animated.View>
+        </GestureDetector>
+      );
+    }
+
+    return (
+      <GestureDetector gesture={weekSwipe}>
+      <Animated.View nativeID="week-pager" style={[styles.zoomContainer, weekPager.style]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[pageContent, { paddingHorizontal: space.s4, paddingBottom: insets.bottom + space.s6 }]}>
+        {weekNav}
 
         {days.map((date) => {
           const key = localDateKey(date);

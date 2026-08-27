@@ -34,6 +34,7 @@ const MAPPING = {
   magnifyingglass: 'search',
   'tray.and.arrow.down': 'download',
   sparkles: 'auto-awesome',
+  'square.grid.2x2': 'grid-view',
   eye: 'visibility',
   'eye.slash': 'visibility-off',
   circle: 'radio-button-unchecked',
