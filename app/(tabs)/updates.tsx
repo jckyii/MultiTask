@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { TabPage } from '@/components/tab-pager';
 import { UPDATE_ENTRIES } from '@/lib/updates/entries';
 import { pageContent } from '@/lib/theme/layout';
 import { useTheme } from '@/lib/theme/use-theme';
@@ -18,6 +19,7 @@ export default function UpdatesScreen() {
   const { colors, space, radius, type, monoFont } = useTheme();
 
   return (
+    <TabPage>
     <View style={[styles.screen, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
       <ScrollView
         contentContainerStyle={[pageContent, { paddingHorizontal: space.s4, paddingBottom: insets.bottom + space.s8 }]}
@@ -74,6 +76,7 @@ export default function UpdatesScreen() {
         </Pressable>
       </ScrollView>
     </View>
+    </TabPage>
   );
 }
 

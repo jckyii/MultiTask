@@ -7,6 +7,7 @@ import { runOnJS } from 'react-native-reanimated';
 import { isReduceMotionEnabled } from '@/lib/reduced-motion';
 
 import { HapticTab } from '@/components/haptic-tab';
+import { TabPagerProvider, useTabPagerGesture } from '@/components/tab-pager';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useCalendarSync } from '@/hooks/use-calendar-sync';
 import { useDroppedOpCount } from '@/hooks/use-dropped-ops';
@@ -103,18 +104,29 @@ export default function TabLayout() {
     const next = TAB_ORDER[current + direction];
     if (next) router.navigate(next);
   }
-  const tabSwipe = Gesture.Pan()
+  // NATIVE: finger-tracking pager (the day-view feel — developer request
+  // 2026-08-26); screens ride the drag via <TabPage>. WEB: the plain
+  // commit-on-release pan — its layouts are verified untransformed.
+  const currentIndex = TAB_ORDER.indexOf(pathname as (typeof TAB_ORDER)[number]);
+  const { pan: trackedPan, dragX } = useTabPagerGesture({
+    hasPrev: currentIndex > 0,
+    hasNext: currentIndex >= 0 && currentIndex < TAB_ORDER.length - 1,
+    onCommit: goNeighbor,
+  });
+  const webPan = Gesture.Pan()
     .activeOffsetX([-48, 48])
     .failOffsetY([-16, 16])
     .onEnd((event) => {
       if (event.translationX < -56) runOnJS(goNeighbor)(1);
       else if (event.translationX > 56) runOnJS(goNeighbor)(-1);
     });
+  const tabSwipe = Platform.OS === 'web' ? webPan : trackedPan;
 
   return (
     <>
     <GestureDetector gesture={tabSwipe}>
     <View style={{ flex: 1 }} collapsable={false}>
+    <TabPagerProvider dragX={dragX}>
     <Tabs
       screenOptions={{
         // Token accent, NOT the Expo template's teal — the active tab is the
@@ -122,10 +134,12 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textTertiary,
         headerShown: false,
-        // Direction-aware page slide on tab changes — the day-view feel for
-        // left/right travel, for swipes and taps alike (developer request
-        // 2026-08-26). Rule 5: instant under reduced motion.
-        animation: isReduceMotionEnabled() ? 'none' : 'shift',
+        // NATIVE: 'none' — the finger-tracking pager owns all left/right
+        // motion (a second animation would double it). WEB: 'shift' gives
+        // tap navigation a directional slide. Rule 5: reduced motion is
+        // handled inside the pager; 'none' everywhere there.
+        animation:
+          Platform.OS !== 'web' || isReduceMotionEnabled() ? 'none' : 'shift',
         tabBarButton: HapticTab,
         ...(sideNav
           ? ({
@@ -182,6 +196,7 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </TabPagerProvider>
     </View>
     </GestureDetector>
     <FirstRunTour />

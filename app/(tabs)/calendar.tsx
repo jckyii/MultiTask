@@ -21,6 +21,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
+import { TabPage } from '@/components/tab-pager';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { TourAnchor, useTourAnchor } from '@/components/tour/tour-context';
 import { usePageSlide } from '@/hooks/use-page-slide';
@@ -523,6 +524,7 @@ export default function CalendarScreen() {
   }
 
   return (
+    <TabPage>
     <View style={[styles.screen, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
       <View ref={barAnchor.ref} onLayout={barAnchor.onLayout} style={[styles.topBar, pageContent, { paddingHorizontal: space.s4, paddingVertical: space.s2 }]}>
         {mode === 'month' ? (
@@ -630,6 +632,7 @@ export default function CalendarScreen() {
       </Animated.View>
       )}
     </View>
+    </TabPage>
   );
 
   // ------------------------- Week list view -------------------------

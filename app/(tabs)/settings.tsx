@@ -13,6 +13,7 @@ import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InputPromptDialog, type PromptRequest } from '@/components/input-prompt';
+import { TabPage } from '@/components/tab-pager';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { TourAnchor, useTour } from '@/components/tour/tour-context';
 import { useUndoToast } from '@/components/undo-toast';
@@ -280,6 +281,7 @@ export default function SettingsScreen() {
   }
 
   return (
+    <TabPage>
     <View style={[styles.screen, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
       <ScrollView
         contentContainerStyle={[pageContent, { paddingHorizontal: space.s4, paddingBottom: insets.bottom + space.s6 }]}>
@@ -492,6 +494,7 @@ export default function SettingsScreen() {
         }}
       />
     </View>
+    </TabPage>
   );
 }
 

@@ -26,42 +26,50 @@ export function useTaskActions() {
     return () => toast.show({ message: `Couldn’t ${what} — check your connection.` });
   }
 
-  function handleSwipeRight(task: Task) {
+  // EVERY action confirms with a banner, the undos included (developer
+  // request 2026-08-26) — each shows its own toast whose Undo runs the
+  // inverse action, so undoing is confirmed and reversible again.
+  function complete(task: Task) {
     animateListChanges();
     markEnter(task.id, 'right');
-    if (task.deletedAt) {
-      restoreTask.mutate(task.id, { onError: showError('restore the task') });
-    } else if (task.isCompleted) {
-      setCompleted.mutate({ id: task.id, isCompleted: false }, { onError: showError('update the task') });
-    } else {
-      setCompleted.mutate({ id: task.id, isCompleted: true }, { onError: showError('complete the task') });
-      toast.show({
-        message: 'Task completed.',
-        onUndo: () => {
-          animateListChanges();
-          markEnter(task.id, 'right');
-          setCompleted.mutate({ id: task.id, isCompleted: false }, { onError: showError('update the task') });
-        },
-      });
-    }
+    setCompleted.mutate({ id: task.id, isCompleted: true }, { onError: showError('complete the task') });
+    toast.show({ message: 'Task completed.', onUndo: () => uncomplete(task) });
+  }
+
+  function uncomplete(task: Task) {
+    animateListChanges();
+    markEnter(task.id, 'right');
+    setCompleted.mutate({ id: task.id, isCompleted: false }, { onError: showError('update the task') });
+    toast.show({ message: 'Marked as not completed.', onUndo: () => complete(task) });
+  }
+
+  function softDelete(task: Task) {
+    animateListChanges();
+    markEnter(task.id, 'left'); // it enters the trash leftward
+    deleteTask.mutate(task.id, { onError: showError('delete the task') });
+    toast.show({ message: 'Task deleted.', onUndo: () => restore(task) });
+  }
+
+  function restore(task: Task) {
+    animateListChanges();
+    markEnter(task.id, 'right');
+    restoreTask.mutate(task.id, { onError: showError('restore the task') });
+    toast.show({ message: 'Task restored.', onUndo: () => softDelete(task) });
+  }
+
+  function handleSwipeRight(task: Task) {
+    if (task.deletedAt) restore(task);
+    else if (task.isCompleted) uncomplete(task);
+    else complete(task);
   }
 
   function handleSwipeLeft(task: Task) {
-    animateListChanges();
     if (task.deletedAt) {
+      animateListChanges();
       permanentlyDelete.mutate(task.id, { onError: showError('delete the task') });
       toast.show({ message: 'Task permanently deleted.' });
     } else {
-      markEnter(task.id, 'left'); // it enters the trash leftward
-      deleteTask.mutate(task.id, { onError: showError('delete the task') });
-      toast.show({
-        message: 'Task deleted.',
-        onUndo: () => {
-          animateListChanges();
-          markEnter(task.id, 'right');
-          restoreTask.mutate(task.id, { onError: showError('restore the task') });
-        },
-      });
+      softDelete(task);
     }
   }
 

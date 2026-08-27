@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fab } from '@/components/fab';
+import { TabPage } from '@/components/tab-pager';
 import { SearchFilterBar } from '@/components/search-filter-bar';
 import { TourAnchor, useTourAnchor } from '@/components/tour/tour-context';
 import { SwipeableTaskCard } from '@/components/swipeable-task-card';
@@ -298,6 +299,7 @@ export default function TaskListScreen() {
   }
 
   return (
+    <TabPage>
     <View style={[styles.screen, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
       {/* The SCROLLABLE spans the window (scrollbar at the true edge; swipe
           exits travel the full viewport) — content centers itself via
@@ -438,6 +440,7 @@ export default function TaskListScreen() {
         onPress={() => router.push('/quick-add')}
       />
     </View>
+    </TabPage>
   );
 }
 

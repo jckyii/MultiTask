@@ -80,7 +80,7 @@ function Toast({ content, onDismiss }: { content: ToastContent; onDismiss: () =>
       // Plain ease-out, NO spring: the springified slide read as the banner
       // "bouncing up and down" (developer, Expo Go review 2026-08-26 - and
       // the real source of two earlier rounds of banner feedback).
-      entering={SlideInDown.duration(420).easing(Easing.out(Easing.cubic))}
+      entering={SlideInDown.duration(560).easing(Easing.out(Easing.cubic))}
       exiting={SlideOutDown.duration(260)}
       style={[
         styles.toast,
