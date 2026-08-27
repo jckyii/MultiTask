@@ -42,7 +42,8 @@ function tabLabel(title: string) {
       }
       Animated.timing(grow, {
         toValue: focused ? 1 : 0,
-        duration: 180,
+        // 320: 180 read as a blink (developer, Expo Go review 2026-08-26).
+        duration: 320,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
@@ -121,6 +122,10 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textTertiary,
         headerShown: false,
+        // Direction-aware page slide on tab changes — the day-view feel for
+        // left/right travel, for swipes and taps alike (developer request
+        // 2026-08-26). Rule 5: instant under reduced motion.
+        animation: isReduceMotionEnabled() ? 'none' : 'shift',
         tabBarButton: HapticTab,
         ...(sideNav
           ? ({

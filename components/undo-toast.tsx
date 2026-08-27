@@ -6,7 +6,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import Animated, { Easing, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 
 import { useTheme } from '@/lib/theme/use-theme';
 
@@ -77,7 +77,10 @@ function Toast({ content, onDismiss }: { content: ToastContent; onDismiss: () =>
 
   return (
     <Animated.View
-      entering={SlideInDown.springify().damping(22).stiffness(260)}
+      // Plain ease-out, NO spring: the springified slide read as the banner
+      // "bouncing up and down" (developer, Expo Go review 2026-08-26 - and
+      // the real source of two earlier rounds of banner feedback).
+      entering={SlideInDown.duration(420).easing(Easing.out(Easing.cubic))}
       exiting={SlideOutDown.duration(260)}
       style={[
         styles.toast,

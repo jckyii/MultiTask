@@ -107,7 +107,9 @@ export const lightColors: ThemeColors = {
   // light mode (developer, TestFlight 2026-08-17). Same hue family, 100s.
   statusOngoingBg: '#DCFCE7',
   statusOngoingAccent: '#16A34A',
-  statusUrgentBg: '#FFEDD5',
+  // Peach, not amber: FFEDD5's yellow cast read badly on white ("looks
+  // like piss" - developer 2026-08-26); same warmth, yellow pulled out.
+  statusUrgentBg: '#FFE9DC',
   statusUrgentAccent: '#EA580C',
   statusOverdueBg: '#FEE2E2',
   statusOverdueAccent: '#DC2626',
