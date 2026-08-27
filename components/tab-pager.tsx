@@ -74,7 +74,9 @@ export function useTabPagerGesture({
     .onEnd((event) => {
       const dir: 1 | -1 = event.translationX < 0 ? 1 : -1;
       const allowed = dir === 1 ? hasNext : hasPrev;
-      const past = Math.abs(event.translationX) > width * 0.4;
+      // 30% (vs the day view's 40): tab hops are frequent, so commit a bit
+      // easier (developer request 2026-08-26).
+      const past = Math.abs(event.translationX) > width * 0.3;
       const flick = Math.abs(event.velocityX) > 800 && Math.abs(event.translationX) > 30;
       if (allowed && (past || flick)) {
         runOnJS(commit)(dir);

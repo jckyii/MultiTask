@@ -128,6 +128,10 @@ export default function TabLayout() {
     <View style={{ flex: 1 }} collapsable={false}>
     <TabPagerProvider dragX={dragX}>
     <Tabs
+      // Keep inactive tab screens ATTACHED: detaching/reattaching the
+      // calendar's native tree on every focus change was the tab-switch
+      // hitch (developer, 2026-08-26). Five screens' memory is cheap.
+      detachInactiveScreens={false}
       screenOptions={{
         // Token accent, NOT the Expo template's teal — the active tab is the
         // most-seen accent in the app and must match the brand color.

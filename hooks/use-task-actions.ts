@@ -2,8 +2,10 @@
 // tasks (Tasks list, Daily view) gets identical behavior: optimistic
 // mutations, undo toasts, regroup animation, entrance marks, error surfacing.
 import { useUndoToast } from '@/components/undo-toast';
+import { useUrgencyThreshold } from '@/hooks/use-urgency-threshold';
 import { animateListChanges } from '@/lib/animate-layout';
 import { markEnter } from '@/lib/enter-marks';
+import { deriveStatus } from '@/lib/tasks/status';
 import type { Task } from '@/lib/tasks/types';
 import {
   useDeleteTask,
@@ -13,6 +15,7 @@ import {
 } from '@/lib/tasks/use-tasks';
 
 export function useTaskActions() {
+  const urgencyThresholdHours = useUrgencyThreshold();
   const setCompleted = useSetTaskCompleted();
   const deleteTask = useDeleteTask();
   const restoreTask = useRestoreTask();
@@ -40,7 +43,11 @@ export function useTaskActions() {
     animateListChanges();
     markEnter(task.id, 'right');
     setCompleted.mutate({ id: task.id, isCompleted: false }, { onError: showError('update the task') });
-    toast.show({ message: 'Marked as not completed.', onUndo: () => complete(task) });
+    // Name the status the task actually lands in (developer request
+    // 2026-08-26) — "ongoing" covers the no-due-date default too.
+    const status = deriveStatus({ ...task, isCompleted: false }, { urgencyThresholdHours });
+    const label = status === 'urgent' ? 'urgent' : status === 'overdue' ? 'overdue' : 'ongoing';
+    toast.show({ message: `Marked as ${label}.`, onUndo: () => complete(task) });
   }
 
   function softDelete(task: Task) {

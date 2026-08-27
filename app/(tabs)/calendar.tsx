@@ -623,9 +623,9 @@ export default function CalendarScreen() {
           // detaching them on tab focus was the entering/leaving lag the
           // developer reported (2026-08-26). getItemLayout means blank
           // fill-in during a fast fling is brief.
-          windowSize={5}
-          initialNumToRender={2}
-          maxToRenderPerBatch={3}
+          windowSize={3}
+          initialNumToRender={1}
+          maxToRenderPerBatch={2}
           removeClippedSubviews
           contentContainerStyle={[pageContent, { paddingHorizontal: space.s4, paddingBottom: insets.bottom + space.s6 }]}
         />
@@ -643,9 +643,9 @@ export default function CalendarScreen() {
           onLayout={onIncomingLayout}
           showsVerticalScrollIndicator={false}
           // Same tight windowing as the month list (tab-focus lag fix).
-          windowSize={5}
-          initialNumToRender={2}
-          maxToRenderPerBatch={3}
+          windowSize={3}
+          initialNumToRender={1}
+          maxToRenderPerBatch={2}
           removeClippedSubviews
           contentContainerStyle={[pageContent, { paddingHorizontal: space.s4, paddingBottom: insets.bottom + space.s6 }]}
         />
