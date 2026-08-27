@@ -172,7 +172,7 @@ export default function EventDetailScreen() {
           </View>
         )}
 
-        {event.source && (
+        {event.source && event.source !== 'manual' && (
           <Text style={[type.caption, { color: colors.textTertiary, fontWeight: '400' }]}>
             Imported from {event.source}
           </Text>

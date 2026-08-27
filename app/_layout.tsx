@@ -74,6 +74,10 @@ function RootNavigator() {
           options={{ presentation: 'transparentModal', animation: 'none', headerShown: false }}
         />
         <Stack.Screen
+          name="add-event"
+          options={{ presentation: 'transparentModal', animation: 'none', headerShown: false }}
+        />
+        <Stack.Screen
           name="styles"
           options={{ presentation: 'transparentModal', animation: 'none', headerShown: false }}
         />

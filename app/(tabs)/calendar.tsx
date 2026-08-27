@@ -576,6 +576,13 @@ export default function CalendarScreen() {
                 />
               </Pressable>
               <Pressable
+                onPress={() => router.push('/add-event')}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Add an event">
+                <IconSymbol name="plus" size={24} color={colors.accent} />
+              </Pressable>
+              <Pressable
                 onPress={() => router.push('/import-events')}
                 hitSlop={10}
                 accessibilityRole="button"
@@ -611,6 +618,15 @@ export default function CalendarScreen() {
           viewabilityConfig={{ itemVisiblePercentThreshold: 40 }}
           onLayout={onIncomingLayout}
           showsVerticalScrollIndicator={false}
+          // Tight windowing: the default (~10 screens of months, 42 cells
+          // each) kept THOUSANDS of native views mounted, and attaching/
+          // detaching them on tab focus was the entering/leaving lag the
+          // developer reported (2026-08-26). getItemLayout means blank
+          // fill-in during a fast fling is brief.
+          windowSize={5}
+          initialNumToRender={2}
+          maxToRenderPerBatch={3}
+          removeClippedSubviews
           contentContainerStyle={[pageContent, { paddingHorizontal: space.s4, paddingBottom: insets.bottom + space.s6 }]}
         />
       ) : (
@@ -626,6 +642,11 @@ export default function CalendarScreen() {
           initialScrollIndex={years.indexOf(visibleYear) >= 0 ? years.indexOf(visibleYear) : YEARS_BACK}
           onLayout={onIncomingLayout}
           showsVerticalScrollIndicator={false}
+          // Same tight windowing as the month list (tab-focus lag fix).
+          windowSize={5}
+          initialNumToRender={2}
+          maxToRenderPerBatch={3}
+          removeClippedSubviews
           contentContainerStyle={[pageContent, { paddingHorizontal: space.s4, paddingBottom: insets.bottom + space.s6 }]}
         />
       )}
