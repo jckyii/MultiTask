@@ -15,6 +15,26 @@ export type UpdateEntry = {
 
 export const UPDATE_ENTRIES: UpdateEntry[] = [
   {
+    date: 'August 26, 2026',
+    title: 'The week gets a real grid',
+    points: [
+      'Week view now has a Google Calendar style grid: seven day columns over a time axis, with your tasks and events as blocks placed at their actual times. Overlapping items share the column side by side. The toggle between the grid and the classic list lives in the top bar while you are in week view, and your pick is remembered.',
+      'You can add events by hand now. The plus button on the Calendar tab takes a title, date, times or all day, location, notes, and a color. Imports still work exactly as before.',
+      'Switching in and out of the Calendar tab is much faster.',
+    ],
+  },
+  {
+    date: 'August 26, 2026',
+    title: 'Feel and polish, from your feedback',
+    points: [
+      'Swiping between tabs on the phone now follows your finger, like the day pages. Release past a third of the screen or flick to change pages, let go early and it springs back. Task cards always win on their own surface.',
+      'Every action confirms with a banner now, undo included. Complete, un-complete, delete, restore, each one tells you what happened and can be reversed.',
+      'The banner glides in slowly with no bounce, the tab underline grows gently, and the light mode status colors are richer, with the urgent tint moved from amber to peach.',
+      'You can drag anywhere on the task list, even the empty space below a short list, and the pull down search works from there too.',
+      'On the computer, hovering any button shows a small tag explaining what it does, and the tour bubble now sits beside the add task form instead of covering it.',
+    ],
+  },
+  {
     date: 'August 18, 2026',
     title: 'Version 1.0 goes to the App Store',
     points: [

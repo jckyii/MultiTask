@@ -178,6 +178,7 @@ SCALE
 ```
 
 ## Working style
+- **CHANGELOG DISCIPLINE (standing instruction 2026-08-26): every commit to main with USER-VISIBLE change also updates `lib/updates/entries.ts`** (the website's Updates tab) — same commit or immediately after. Skip pure-internal commits. Plain language, no semicolons, no em dashes, newest first; group a burst of same-day changes into one entry.
 - Developer is learning React Native as they go — explain reasoning, go step by step, one piece at a time (describe → build → test → iterate).
 - **Do NOT enable "accept all" edits blindly early on** — approve changes individually until trust is built.
 - **Commit often** (each commit is a restore point). Secrets (Supabase keys, credentials) NEVER go in the repo — use env files excluded via .gitignore.
