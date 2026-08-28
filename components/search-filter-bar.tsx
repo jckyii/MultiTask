@@ -102,8 +102,8 @@ export function SearchFilterBar({ filters, onChange, panelOpen, onTogglePanel, c
           accessibilityState={{ expanded: panelOpen }}
           accessibilityLabel={
             panelOpen
-              ? 'Hide the urgency, category, and subject filters'
-              : 'Filter tasks by urgency, category, or subject'
+              ? 'Hide the urgency, lifestyle, and subject filters'
+              : 'Filter tasks by urgency, lifestyle, or subject'
           }
           style={[styles.filterButton, { gap: 2 }]}>
           <Text style={[type.body, { color: colors.accent }]}>Filter</Text>
@@ -146,7 +146,7 @@ export function SearchFilterBar({ filters, onChange, panelOpen, onTogglePanel, c
 
           {categories.length > 0 && (
             <>
-              {label('Category')}
+              {label('Lifestyle')}
               <View style={[styles.wrapRow, { gap: space.s2 }]}>
                 {categories.map((c) =>
                   chip(

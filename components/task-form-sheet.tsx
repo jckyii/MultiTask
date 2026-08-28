@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { CollapsibleReveal } from '@/components/collapsible-reveal';
+import { animateListChanges } from '@/lib/animate-layout';
 import { InlineDatePicker } from '@/components/inline-date-picker';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { TourAnchor, useTour } from '@/components/tour/tour-context';
@@ -34,6 +35,7 @@ import { useUndoToast } from '@/components/undo-toast';
 import { confirmDialog } from '@/lib/confirm';
 import { TASK_DESCRIPTION_MAX, TASK_TITLE_MAX } from '@/lib/limits';
 import { endOfToday } from '@/lib/tasks/dates';
+import { lifestyleGroups } from '@/lib/tasks/lifestyles';
 import { useDeleteCategory, useDeleteSubject, useTasks } from '@/lib/tasks/use-tasks';
 import { useWideNative } from '@/hooks/use-wide-layout';
 import { tabletSheet } from '@/lib/theme/layout';
@@ -253,35 +255,41 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     const timer = setTimeout(() => emitTourEvent('form-details-open'), 80);
     return () => clearTimeout(timer);
   }, [tourActive, tourIndex, detailsOpen]);
-  const [creating, setCreating] = useState<'category' | 'subject' | null>(null);
-  // Options created in this session, so they render as selectable chips
-  // immediately (they become "existing" once a task is saved with them).
-  const [extraCategories, setExtraCategories] = useState<NamedColor[]>([]);
-  const [extraSubjects, setExtraSubjects] = useState<NamedColor[]>([]);
+  const [creating, setCreating] = useState<'lifestyle' | 'subject' | null>(null);
+  // The lifestyle box currently EXPANDED in the selector (null = list or
+  // stacked summary). Expanding IS selecting (developer spec 2026-08-26);
+  // tapping the expanded box again clears the selection.
+  const [activeLifestyle, setActiveLifestyle] = useState<string | null>(null);
+  // Options created in this session, so they render immediately (they
+  // become "existing" once a task is saved with them). Extra subjects are
+  // keyed by their lifestyle — a subject can't exist without one.
+  const [extraLifestyles, setExtraLifestyles] = useState<NamedColor[]>([]);
+  const [extraSubjectsByLifestyle, setExtraSubjectsByLifestyle] = useState<Map<string, NamedColor[]>>(
+    new Map()
+  );
 
-  // Existing categories/subjects, data-driven from the user's real tasks.
+  // The lifestyle hierarchy, data-driven from the user's real tasks
+  // (lib/tasks/lifestyles.ts) plus this session's creations.
   const { data: tasks } = useTasks();
   const deleteCategory = useDeleteCategory();
   const deleteSubject = useDeleteSubject();
   const toast = useUndoToast();
-  const { categories, subjects } = useMemo(() => {
-    const cats = new Map<string, string>();
-    const subs = new Map<string, string>();
-    for (const t of tasks ?? []) {
-      if (t.category && t.category !== 'Uncategorized' && !cats.has(t.category)) {
-        cats.set(t.category, t.categoryColor);
-      }
-      if (t.subject && !subs.has(t.subject)) {
-        subs.set(t.subject, t.subjectColor);
-      }
+  const groups = useMemo(() => {
+    const derived = lifestyleGroups(tasks ?? []);
+    const byName = new Map(derived.map((g) => [g.name, { ...g, subjects: [...g.subjects] }]));
+    for (const extra of extraLifestyles) {
+      if (!byName.has(extra.name)) byName.set(extra.name, { name: extra.name, color: extra.color, subjects: [] });
     }
-    for (const extra of extraCategories) if (!cats.has(extra.name)) cats.set(extra.name, extra.color);
-    for (const extra of extraSubjects) if (!subs.has(extra.name)) subs.set(extra.name, extra.color);
-    return {
-      categories: [...cats].map(([name, color]) => ({ name, color })),
-      subjects: [...subs].map(([name, color]) => ({ name, color })),
-    };
-  }, [tasks, extraCategories, extraSubjects]);
+    for (const [lifestyleName, extras] of extraSubjectsByLifestyle) {
+      const group = byName.get(lifestyleName);
+      if (!group) continue;
+      for (const s of extras) {
+        if (!group.subjects.some((x) => x.name === s.name)) group.subjects.push(s);
+      }
+      group.subjects.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [tasks, extraLifestyles, extraSubjectsByLifestyle]);
 
   // Sheet surface stays anchored to the screen bottom and pads itself by the
   // keyboard height — no backdrop gap under the box.
@@ -403,33 +411,48 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     close();
   }
 
-  // Long-press a category/subject chip to delete it. Because these aren't
-  // their own records (just the distinct values across your tasks), deleting
-  // one clears it off every task that carries it — the confirm says how many.
-  async function removeOption(kind: 'category' | 'subject', option: NamedColor) {
+  // Long-press a lifestyle box or subject chip to delete it. These aren't
+  // their own records (just the distinct values across your tasks), so
+  // deleting clears it off every task that carries it — the confirm says
+  // how many. Deleting a lifestyle also clears its subjects on those tasks
+  // (a subject can't exist without a lifestyle).
+  async function removeOption(kind: 'lifestyle' | 'subject', option: NamedColor) {
     const inUse = (tasks ?? []).filter((t) =>
-      kind === 'category' ? t.category === option.name : t.subject === option.name
+      kind === 'lifestyle' ? t.category === option.name : t.subject === option.name
     ).length;
     const confirmed = await confirmDialog({
       title: `Delete ${kind} “${option.name}”?`,
       message:
         inUse > 0
-          ? `It’ll be removed from ${inUse} task${inUse === 1 ? '' : 's'}.`
+          ? `It’ll be removed from ${inUse} task${inUse === 1 ? '' : 's'}${kind === 'lifestyle' ? ', along with their subjects' : ''}.`
           : 'This removes it from the list.',
       confirmLabel: 'Delete',
       destructive: true,
     });
     if (!confirmed) return;
-    if (kind === 'category') {
-      setExtraCategories((prev) => prev.filter((c) => c.name !== option.name));
-      if (category?.name === option.name) setCategory(null);
+    if (kind === 'lifestyle') {
+      setExtraLifestyles((prev) => prev.filter((c) => c.name !== option.name));
+      setExtraSubjectsByLifestyle((prev) => {
+        const next = new Map(prev);
+        next.delete(option.name);
+        return next;
+      });
+      if (category?.name === option.name) {
+        setCategory(null);
+        setSubject(null);
+      }
+      if (activeLifestyle === option.name) setActiveLifestyle(null);
       if (inUse > 0) deleteCategory.mutate(option.name);
     } else {
-      setExtraSubjects((prev) => prev.filter((s) => s.name !== option.name));
+      setExtraSubjectsByLifestyle((prev) => {
+        const next = new Map(prev);
+        for (const [k, list] of next) next.set(k, list.filter((s) => s.name !== option.name));
+        return next;
+      });
       if (subject?.name === option.name) setSubject(null);
       if (inUse > 0) deleteSubject.mutate(option.name);
     }
-    toast.show({ message: `${kind === 'category' ? 'Category' : 'Subject'} deleted.` });
+    toast.show({ message: `${kind === 'lifestyle' ? 'Lifestyle' : 'Subject'} deleted.` });
   }
 
   // Date/time picker reveal — animated height, slide open/closed.
@@ -739,71 +762,166 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
               </TourAnchor>
               </View>
 
+              {/* THE LIFESTYLE SELECTOR (developer revamp 2026-08-26).
+                  States: summary (something picked) / list (nothing picked) /
+                  expanded (one lifestyle open, its subjects + "+new" inside;
+                  the other lifestyles slide away underneath). Expanding IS
+                  selecting; tapping the expanded box again clears it. */}
               <View style={{ gap: space.s2 }}>
-              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Category</Text>
-              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-category" style={creating === 'category' ? undefined : { alignSelf: 'flex-start' }}>
-              <View style={[styles.wrapRow, { gap: space.s2 }]}>
-                {categories.map((c) => (
-                  <SelectChip
-                    key={c.name}
-                    label={c.name}
-                    color={c.color}
-                    selected={category?.name === c.name}
-                    onPress={() => { setCategory(category?.name === c.name ? null : c); emitTourEvent('form-category-set'); }}
-                    onDelete={() => removeOption('category', c)}
-                  />
-                ))}
-                <SelectChip
-                  label="＋ New"
-                  selected={creating === 'category'}
-                  onPress={() => setCreating(creating === 'category' ? null : 'category')}
-                />
-              </View>
-              {creating === 'category' && (
-                <NewOptionCreator
-                  placeholder="New category name"
-                  onCreate={(option) => {
-                    setExtraCategories((prev) => [...prev, option]);
-                    setCategory(option);
-                    emitTourEvent('form-category-set');
-                    setCreating(null);
-                  }}
-                />
-              )}
-              </TourAnchor>
-              </View>
-
+              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Lifestyle</Text>
+              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-lifestyle">
               <View style={{ gap: space.s2 }}>
-              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Subject</Text>
-              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-subject" style={creating === 'subject' ? undefined : { alignSelf: 'flex-start' }}>
-              <View style={[styles.wrapRow, { gap: space.s2 }]}>
-                {subjects.map((s) => (
-                  <SelectChip
-                    key={s.name}
-                    label={s.name}
-                    color={s.color}
-                    selected={subject?.name === s.name}
-                    onPress={() => { setSubject(subject?.name === s.name ? null : s); emitTourEvent('form-subject-set'); }}
-                    onDelete={() => removeOption('subject', s)}
-                  />
-                ))}
-                <SelectChip
-                  label="＋ New"
-                  selected={creating === 'subject'}
-                  onPress={() => setCreating(creating === 'subject' ? null : 'subject')}
-                />
+                {category && activeLifestyle === null ? (
+                  // STACKED summary: the subject box with the lifestyle's
+                  // color bar peeking at its top (the ( a ( b ) overlap).
+                  <Pressable
+                    onPress={() => {
+                      animateListChanges();
+                      setActiveLifestyle(category.name);
+                    }}
+                    onLongPress={() =>
+                      removeOption(subject ? 'subject' : 'lifestyle', subject ?? category)
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`Lifestyle ${category.name}${subject ? `, subject ${subject.name}` : ''}. Tap to change.`}
+                    style={[styles.lifestyleBox, { borderColor: colors.borderSubtle, borderRadius: radius.button }]}>
+                    <View style={[styles.lifestyleBar, { backgroundColor: category.color }]} />
+                    <View style={[styles.lifestyleBody, { paddingHorizontal: space.s3 }]}>
+                      {subject && (
+                        <View style={[styles.subjectDot, { backgroundColor: subject.color }]} />
+                      )}
+                      <Text style={[type.body, { color: colors.textPrimary }]} numberOfLines={1}>
+                        {subject ? subject.name : category.name}
+                      </Text>
+                      {subject && (
+                        <Text style={[type.caption, { color: colors.textTertiary, fontWeight: '400' }]} numberOfLines={1}>
+                          {category.name}
+                        </Text>
+                      )}
+                    </View>
+                  </Pressable>
+                ) : activeLifestyle !== null ? (
+                  // EXPANDED: only the active lifestyle shows; subjects
+                  // (alphabetical) inside, "+new" always last and open.
+                  (() => {
+                    const group = groups.find((g) => g.name === activeLifestyle);
+                    if (!group) return null;
+                    return (
+                      <View style={[styles.lifestyleBox, { borderColor: colors.accent, borderRadius: radius.button }]}>
+                        <Pressable
+                          onPress={() => {
+                            // Second tap clears the selection (spec).
+                            animateListChanges();
+                            setCategory(null);
+                            setSubject(null);
+                            setActiveLifestyle(null);
+                            setCreating(null);
+                          }}
+                          onLongPress={() => removeOption('lifestyle', { name: group.name, color: group.color })}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: true }}
+                          accessibilityLabel={`Lifestyle ${group.name} selected. Tap to clear.`}>
+                          <View style={[styles.lifestyleBar, { backgroundColor: group.color }]} />
+                          <View style={[styles.lifestyleBody, { paddingHorizontal: space.s3 }]}>
+                            <Text style={[type.body, { color: colors.textPrimary, fontWeight: '600' }]} numberOfLines={1}>
+                              {group.name}
+                            </Text>
+                          </View>
+                        </Pressable>
+                        <View style={[styles.subjectList, { paddingHorizontal: space.s3, paddingBottom: space.s3, gap: space.s2 }]}>
+                          <View style={[styles.wrapRow, { gap: space.s2 }]}>
+                            {group.subjects.map((s) => (
+                              <SelectChip
+                                key={s.name}
+                                label={s.name}
+                                color={s.color}
+                                selected={subject?.name === s.name}
+                                onPress={() => {
+                                  animateListChanges();
+                                  setSubject(s);
+                                  setActiveLifestyle(null);
+                                  setCreating(null);
+                                  emitTourEvent('form-subject-set');
+                                }}
+                                onDelete={() => removeOption('subject', s)}
+                              />
+                            ))}
+                            <SelectChip
+                              label="＋new"
+                              selected={creating === 'subject'}
+                              onPress={() => setCreating(creating === 'subject' ? null : 'subject')}
+                            />
+                          </View>
+                          {creating === 'subject' && (
+                            <NewOptionCreator
+                              placeholder="New subject name"
+                              onCreate={(option) => {
+                                setExtraSubjectsByLifestyle((prev) => {
+                                  const next = new Map(prev);
+                                  next.set(group.name, [...(next.get(group.name) ?? []), option]);
+                                  return next;
+                                });
+                                animateListChanges();
+                                setSubject(option);
+                                setActiveLifestyle(null);
+                                setCreating(null);
+                                emitTourEvent('form-subject-set');
+                              }}
+                            />
+                          )}
+                        </View>
+                      </View>
+                    );
+                  })()
+                ) : (
+                  // LIST: every lifestyle (alphabetical) + "+ New" last.
+                  <View style={{ gap: space.s2 }}>
+                    {groups.map((g) => (
+                      <Pressable
+                        key={g.name}
+                        onPress={() => {
+                          // Expanding IS selecting (spec) — the subjects
+                          // drop down automatically.
+                          animateListChanges();
+                          setCategory({ name: g.name, color: g.color });
+                          setSubject(null);
+                          setActiveLifestyle(g.name);
+                          emitTourEvent('form-category-set');
+                        }}
+                        onLongPress={() => removeOption('lifestyle', { name: g.name, color: g.color })}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Lifestyle ${g.name}, ${g.subjects.length} subjects`}
+                        style={[styles.lifestyleBox, { borderColor: colors.borderSubtle, borderRadius: radius.button }]}>
+                        <View style={[styles.lifestyleBar, { backgroundColor: g.color }]} />
+                        <View style={[styles.lifestyleBody, { paddingHorizontal: space.s3 }]}>
+                          <Text style={[type.body, { color: colors.textPrimary }]} numberOfLines={1}>
+                            {g.name}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    ))}
+                    <SelectChip
+                      label="＋ New"
+                      selected={creating === 'lifestyle'}
+                      onPress={() => setCreating(creating === 'lifestyle' ? null : 'lifestyle')}
+                    />
+                    {creating === 'lifestyle' && (
+                      <NewOptionCreator
+                        placeholder="New lifestyle name"
+                        onCreate={(option) => {
+                          setExtraLifestyles((prev) => [...prev, option]);
+                          animateListChanges();
+                          setCategory(option);
+                          setSubject(null);
+                          setActiveLifestyle(option.name);
+                          setCreating(null);
+                          emitTourEvent('form-category-set');
+                        }}
+                      />
+                    )}
+                  </View>
+                )}
               </View>
-              {creating === 'subject' && (
-                <NewOptionCreator
-                  placeholder="New subject name"
-                  onCreate={(option) => {
-                    setExtraSubjects((prev) => [...prev, option]);
-                    setSubject(option);
-                    emitTourEvent('form-subject-set');
-                    setCreating(null);
-                  }}
-                />
-              )}
               </TourAnchor>
               </View>
 
@@ -914,6 +1032,25 @@ const styles = StyleSheet.create({
   wrapRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+  },
+  lifestyleBox: {
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  lifestyleBar: {
+    height: 6,
+  },
+  lifestyleBody: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  subjectList: {},
+  subjectDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   descriptionInput: {
     minHeight: 72,

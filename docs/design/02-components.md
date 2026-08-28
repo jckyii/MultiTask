@@ -188,3 +188,26 @@ Widgets must render with **no live network** — they read from the same local S
 - [ ] Empty states factual, not "hopeful"?
 - [ ] Undo available for destructive actions?
 - [ ] Sync-state indicator present on data screens?
+
+## Lifestyles (revamp 2026-08-26, replaces flat category + subject)
+
+- Categories are now **lifestyles**; every subject belongs to exactly one
+  lifestyle. The hierarchy is DERIVED from tasks (a subject belongs to the
+  lifestyle it co-occurs with) - no schema change, web app untouched.
+  One-time cleanup: `supabase/13-lifestyle-migration.sql` (orphan subjects
+  cleared, per developer decision).
+- **Form selector** (task-form-sheet): lifestyle BOXES, alphabetical, color
+  shown as a solid 6px bar across the box TOP (not a leading dot). Tapping
+  a box selects AND expands it (subjects alphabetical inside, `+new` chip
+  always last); the other lifestyles slide away; tapping the expanded box
+  again clears the selection. Picking a subject collapses to a stacked
+  summary: a compact box with the lifestyle bar on top, the subject (dot +
+  name) inside, the lifestyle name in caption gray beside it.
+- **Card badge**: ONE combined pill - `( lifestyle ( subject )` - the
+  subject pill overlaps the lifestyle pill's right cap (LifestylePill in
+  components/pill.tsx; lifestyle paddingRight 18, subject marginLeft -14).
+  Subject-less tasks show the plain lifestyle pill.
+- Deleting a lifestyle clears it AND its subjects off every task carrying
+  it (no orphan subjects, ever). Long-press deletes, same as before.
+- Tour: the category and subject steps merged into one "Lifestyle" step
+  (21 steps total).

@@ -246,19 +246,25 @@ export function useDeleteCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: TASKS_MUTATION_KEY,
+    // Subjects live UNDER a lifestyle (revamp 2026-08-26), so removing the
+    // lifestyle clears its tasks' subjects too — never leave orphans.
     mutationFn: async (name: string) => {
       const db = syncDb();
       if (db) {
-        await db.execute('UPDATE task SET category=?, category_color=? WHERE category=?', [
-          DEFAULT_CATEGORY,
-          DEFAULT_CATEGORY_COLOR,
-          name,
-        ]);
+        await db.execute(
+          'UPDATE task SET category=?, category_color=?, subject=NULL, subject_color=NULL WHERE category=?',
+          [DEFAULT_CATEGORY, DEFAULT_CATEGORY_COLOR, name]
+        );
         return;
       }
       const { error } = await supabase
         .from('task')
-        .update({ category: DEFAULT_CATEGORY, category_color: DEFAULT_CATEGORY_COLOR })
+        .update({
+          category: DEFAULT_CATEGORY,
+          category_color: DEFAULT_CATEGORY_COLOR,
+          subject: null,
+          subject_color: null,
+        })
         .eq('category', name);
       if (error) throw error;
     },
@@ -266,7 +272,13 @@ export function useDeleteCategory() {
       applyOptimistic(queryClient, (tasks) =>
         tasks.map((t) =>
           t.category === name
-            ? { ...t, category: DEFAULT_CATEGORY, categoryColor: DEFAULT_CATEGORY_COLOR }
+            ? {
+                ...t,
+                category: DEFAULT_CATEGORY,
+                categoryColor: DEFAULT_CATEGORY_COLOR,
+                subject: '',
+                subjectColor: DEFAULT_SUBJECT_COLOR,
+              }
             : t
         )
       ),

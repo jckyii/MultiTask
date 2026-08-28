@@ -15,8 +15,8 @@ const isWeb = Platform.OS === 'web';
 const SECTIONS: { title: string; body: string; webBody?: string }[] = [
   {
     title: 'Add a task fast',
-    body: 'Tap the + button. A task only needs a title and a time. Everything else, like category, subject, priority, and notes, lives under Details. Long-press a category or subject chip there to delete it.',
-    webBody: 'Click the + button. A task only needs a title and a time — everything else (category, subject, priority, notes) lives under Details. Long-press a category or subject chip there to delete it.',
+    body: 'Tap the + button. A task only needs a title and a time. Everything else, like lifestyle, subject, priority, and notes, lives under Details. Long-press a lifestyle or subject chip there to delete it.',
+    webBody: 'Click the + button. A task only needs a title and a time — everything else (lifestyle, subject, priority, notes) lives under Details. Long-press a lifestyle or subject chip there to delete it.',
   },
   {
     title: 'Complete and delete by swiping',
@@ -41,8 +41,8 @@ const SECTIONS: { title: string; body: string; webBody?: string }[] = [
   },
   {
     title: 'Search and filter',
-    body: 'Pull down a little on the task list to open search. Filter narrows by urgency, category, or subject.',
-    webBody: 'The search bar is always at the top of Tasks. Filter narrows by urgency, category, or subject.',
+    body: 'Pull down a little on the task list to open search. Filter narrows by urgency, lifestyle, or subject.',
+    webBody: 'The search bar is always at the top of Tasks. Filter narrows by urgency, lifestyle, or subject.',
   },
   {
     title: 'Works offline',

@@ -7,7 +7,7 @@
 // No drop shadow — cards separate by border + surface contrast.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Pill, PriorityBadge } from '@/components/pill';
+import { LifestylePill, Pill, PriorityBadge } from '@/components/pill';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useUrgencyThreshold } from '@/hooks/use-urgency-threshold';
 import { formatDueDate } from '@/lib/tasks/dates';
@@ -126,8 +126,12 @@ export function TaskCard({ task, onToggleComplete, onDelete, onPress, onLongPres
 
         <View style={[styles.pillRow, { gap: space.s2, marginTop: space.s2 }]}>
           {task.priority != null && <PriorityBadge priority={task.priority} />}
-          <Pill label={task.category} color={task.categoryColor} />
-          {task.subject.length > 0 && <Pill label={task.subject} color={task.subjectColor} />}
+          <LifestylePill
+            lifestyle={task.category}
+            lifestyleColor={task.categoryColor}
+            subject={task.subject.length > 0 ? task.subject : null}
+            subjectColor={task.subjectColor}
+          />
         </View>
       </View>
     </Pressable>

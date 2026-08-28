@@ -15,6 +15,16 @@ export type UpdateEntry = {
 
 export const UPDATE_ENTRIES: UpdateEntry[] = [
   {
+    date: 'August 27, 2026',
+    title: 'Lifestyles',
+    points: [
+      'Categories are now lifestyles, and every subject lives inside one. When you add a task you pick a lifestyle first, its subjects drop down underneath, and new subjects are created right there with the +new chip.',
+      'Each lifestyle shows its color as a solid bar across the top of its box. Once you have picked, the choice collapses into one compact box with the lifestyle bar on top and the subject inside.',
+      'Task cards now show one combined badge, the subject pill overlapping the end of its lifestyle pill, both keeping their colors.',
+      'Your existing tasks came along automatically. Categories became lifestyles, and each subject moved in under the lifestyle it was already on a task with.',
+    ],
+  },
+  {
     date: 'August 26, 2026',
     title: 'The week gets a real grid',
     points: [
