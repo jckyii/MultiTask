@@ -18,11 +18,27 @@ export function Pill({ label, color }: { label: string; color: string }) {
   );
 }
 
-/** The lifestyle + subject badge (developer revamp 2026-08-26): ONE
- *  combined pill — `( lifestyle ( subject )` — the subject pill starts
- *  where the lifestyle pill would end, overlapping its right cap, both
- *  keeping their own colors. Subject-less tasks fall back to the plain
+/** The lifestyle + subject badge (developer revamp, corrected round 2
+ *  2026-08-27): ONE combined badge shaped `( lifestyle )  subject )` — the
+ *  lifestyle pill is SOLID in its own color and sits ON TOP at the left,
+ *  fully closed; the subject pill runs BEHIND it, its tail and text
+ *  showing to the right ("more looks like a venn diagram" was the round-1
+ *  overlap of two pastel pills). Subject-less tasks fall back to the plain
  *  lifestyle pill. */
+/** Black-or-white for text sitting ON a solid user color (the pastel
+ *  pillColors math is for tinted surfaces, not raw fills). */
+function textOnSolid(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return '#FFFFFF';
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  // Perceived luminance (ITU-R BT.601) — enough to pick black vs white.
+  const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+  return luma > 150 ? '#1A1A1D' : '#FFFFFF';
+}
+
 export function LifestylePill({
   lifestyle,
   lifestyleColor,
@@ -36,22 +52,24 @@ export function LifestylePill({
 }) {
   const { isDark } = useTheme();
   if (!subject) return <Pill label={lifestyle} color={lifestyleColor} />;
-  const life = pillColors(lifestyleColor, isDark);
   const sub = pillColors(subjectColor, isDark);
   return (
     <View style={styles.combinedRow}>
+      {/* Solid lifestyle color, auto-contrast text, ABOVE the subject. */}
       <View
         style={[
           styles.pill,
           styles.combinedLifestyle,
-          { backgroundColor: life.background, borderColor: life.border },
+          { backgroundColor: lifestyleColor, borderColor: lifestyleColor },
         ]}>
-        <Text style={[styles.label, { color: life.text }]} numberOfLines={1}>
+        <Text
+          style={[styles.label, { color: textOnSolid(lifestyleColor) }]}
+          numberOfLines={1}>
           {lifestyle}
         </Text>
       </View>
-      {/* Overlaps the lifestyle pill's right end — its rounded left cap IS
-          the lifestyle pill's ending, per the ( a ( b ) sketch. */}
+      {/* Runs underneath; paddingLeft keeps its text clear of the overlap
+          so only the tail shows: ( lifestyle )  subject ) */}
       <View
         style={[
           styles.pill,
@@ -93,11 +111,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   combinedLifestyle: {
-    // Room for the subject pill's cap to land on top of this end.
-    paddingRight: 18,
+    zIndex: 2,
   },
   combinedSubject: {
-    marginLeft: -14,
+    zIndex: 1,
+    // Slides under the lifestyle pill; the padding keeps the subject text
+    // out in the visible tail.
+    marginLeft: -16,
+    paddingLeft: 24,
   },
   label: {
     fontSize: 12,

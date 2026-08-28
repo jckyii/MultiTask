@@ -203,10 +203,14 @@ Widgets must render with **no live network** — they read from the same local S
   again clears the selection. Picking a subject collapses to a stacked
   summary: a compact box with the lifestyle bar on top, the subject (dot +
   name) inside, the lifestyle name in caption gray beside it.
-- **Card badge**: ONE combined pill - `( lifestyle ( subject )` - the
-  subject pill overlaps the lifestyle pill's right cap (LifestylePill in
-  components/pill.tsx; lifestyle paddingRight 18, subject marginLeft -14).
-  Subject-less tasks show the plain lifestyle pill.
+- **Card badge** (corrected round 2): ONE combined badge shaped
+  `( lifestyle )  subject )` - the lifestyle pill is SOLID in its own color
+  (black/white text by luminance) and sits ON TOP at the left, fully
+  closed; the subject pill runs BEHIND it in normal pastel treatment, tail
+  and text visible to the right (LifestylePill in components/pill.tsx:
+  subject marginLeft -16 / paddingLeft 24, zIndex under). Round 1's two
+  overlapping pastel pills read as a venn diagram (developer). Subject-less
+  tasks show the plain lifestyle pill.
 - Deleting a lifestyle clears it AND its subjects off every task carrying
   it (no orphan subjects, ever). Long-press deletes, same as before.
 - Tour: the category and subject steps merged into one "Lifestyle" step
