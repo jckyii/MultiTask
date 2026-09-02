@@ -22,6 +22,7 @@ export const UPDATE_ENTRIES: UpdateEntry[] = [
       'Each lifestyle shows its color as a solid bar across the top of its box. Once you have picked, the choice collapses into one compact box with the lifestyle bar on top and the subject inside.',
       'Task cards now show one combined badge. The lifestyle sits in front in its solid color, and the subject pill runs behind it with its tail showing.',
       'Your existing tasks came along automatically. Categories became lifestyles, and each subject moved in under the lifestyle it was already on a task with.',
+      'On the computer you can right click a lifestyle or subject to delete it. On the phone, long press works as before.',
     ],
   },
   {
