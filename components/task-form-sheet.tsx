@@ -29,6 +29,7 @@ import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming
 import { CollapsibleReveal } from '@/components/collapsible-reveal';
 import { animateListChanges } from '@/lib/animate-layout';
 import { InlineDatePicker } from '@/components/inline-date-picker';
+import { RightClickMenu } from '@/components/right-click-menu';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { TourAnchor, useTour } from '@/components/tour/tour-context';
 import { useUndoToast } from '@/components/undo-toast';
@@ -79,17 +80,20 @@ function SelectChip({
   selected,
   onPress,
   onDelete,
+  deleteLabel,
   color,
 }: {
   label: string;
   selected: boolean;
   onPress: () => void;
-  /** When set, long-press (or the VoiceOver "Delete" action) removes it. */
+  /** When set, long-press (or the VoiceOver "Delete" action) removes it;
+   *  on desktop a right-click menu offers it too. */
   onDelete?: () => void;
+  deleteLabel?: string;
   color?: string;
 }) {
   const { colors, space, radius, type } = useTheme();
-  return (
+  const chip = (
     <Pressable
       onPress={onPress}
       onLongPress={onDelete}
@@ -118,6 +122,12 @@ function SelectChip({
       {color && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} />}
       <Text style={[type.body, { color: selected ? colors.accent : colors.textPrimary }]}>{label}</Text>
     </Pressable>
+  );
+  if (!onDelete) return chip;
+  return (
+    <RightClickMenu items={[{ label: deleteLabel ?? `Delete “${label}”`, destructive: true, onPress: onDelete }]}>
+      {chip}
+    </RightClickMenu>
   );
 }
 
@@ -774,6 +784,13 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                 {category && activeLifestyle === null ? (
                   // STACKED summary: the subject box with the lifestyle's
                   // color bar peeking at its top (the ( a ( b ) overlap).
+                  <RightClickMenu
+                    items={[
+                      ...(subject
+                        ? [{ label: `Delete subject “${subject.name}”`, destructive: true, onPress: () => removeOption('subject', subject) }]
+                        : []),
+                      { label: `Delete lifestyle “${category.name}”`, destructive: true, onPress: () => removeOption('lifestyle', category) },
+                    ]}>
                   <Pressable
                     onPress={() => {
                       animateListChanges();
@@ -800,6 +817,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                       )}
                     </View>
                   </Pressable>
+                  </RightClickMenu>
                 ) : activeLifestyle !== null ? (
                   // EXPANDED: only the active lifestyle shows; subjects
                   // (alphabetical) inside, "+new" always last and open.
@@ -808,6 +826,8 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                     if (!group) return null;
                     return (
                       <View style={[styles.lifestyleBox, { borderColor: colors.accent, borderRadius: radius.button }]}>
+                        <RightClickMenu
+                          items={[{ label: `Delete lifestyle “${group.name}”`, destructive: true, onPress: () => removeOption('lifestyle', { name: group.name, color: group.color }) }]}>
                         <Pressable
                           onPress={() => {
                             // Second tap clears the selection (spec).
@@ -828,6 +848,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                             </Text>
                           </View>
                         </Pressable>
+                        </RightClickMenu>
                         <View style={[styles.subjectList, { paddingHorizontal: space.s3, paddingBottom: space.s3, gap: space.s2 }]}>
                           <View style={[styles.wrapRow, { gap: space.s2 }]}>
                             {group.subjects.map((s) => (
@@ -844,6 +865,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                                   emitTourEvent('form-subject-set');
                                 }}
                                 onDelete={() => removeOption('subject', s)}
+                                deleteLabel={`Delete subject “${s.name}”`}
                               />
                             ))}
                             <SelectChip
@@ -877,8 +899,10 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                   // LIST: every lifestyle (alphabetical) + "+ New" last.
                   <View style={{ gap: space.s2 }}>
                     {groups.map((g) => (
-                      <Pressable
+                      <RightClickMenu
                         key={g.name}
+                        items={[{ label: `Delete lifestyle “${g.name}”`, destructive: true, onPress: () => removeOption('lifestyle', { name: g.name, color: g.color }) }]}>
+                      <Pressable
                         onPress={() => {
                           // Expanding IS selecting (spec) — the subjects
                           // drop down automatically.
@@ -899,6 +923,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                           </Text>
                         </View>
                       </Pressable>
+                      </RightClickMenu>
                     ))}
                     <SelectChip
                       label="＋ New"
