@@ -26,6 +26,7 @@ export const UPDATE_ENTRIES: UpdateEntry[] = [
       'Pressing enter in the notes field or a name field now just puts the keyboard away instead of doing anything surprising.',
       'Daily tasks are called recurring tasks now, which is what they always were.',
       'Removing a recurring task is deliberate now. On the phone hold the row and confirm, on the computer right click it. The left swipe no longer deletes, so a nudge can never throw one away.',
+      'The day view shows all 24 hours at true scale now, with every hour line drawn even where nothing sits. It opens at your first item of the day, and dragging down only closes the page when you started the drag from the very top.',
     ],
   },
   {

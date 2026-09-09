@@ -11,7 +11,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { DayTimeline } from '@/components/day-timeline';
+import { DayTimeline, DAY_TIMELINE_PX_PER_HOUR } from '@/components/day-timeline';
 import { EventCard } from '@/components/event-card';
 import { SwipeableTaskCard } from '@/components/swipeable-task-card';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -129,6 +129,10 @@ export default function DayScreen() {
   // in the gesture the list reached the top, so the page never jumps.
   const scrollTop = useSharedValue(0);
   const dragBase = useSharedValue(-1);
+  // Dismissal is only offered when the drag BEGAN with the list at the top
+  // (developer 2026-09-09) — scrolling up from mid-list used to hand the
+  // tail of the same gesture to the dismiss pan, yanking the page down.
+  const startedAtTop = useSharedValue(false);
   const scrollGesture = Gesture.Native();
 
   const pagePan = Gesture.Pan()
@@ -137,9 +141,10 @@ export default function DayScreen() {
     .simultaneousWithExternalGesture(scrollGesture)
     .onStart(() => {
       dragBase.value = -1;
+      startedAtTop.value = scrollTop.value <= 0.5;
     })
     .onUpdate((event) => {
-      if (scrollTop.value <= 0.5 && event.translationY > 0) {
+      if (startedAtTop.value && scrollTop.value <= 0.5 && event.translationY > 0) {
         if (dragBase.value < 0) dragBase.value = event.translationY;
         dragY.value = Math.max(0, event.translationY - dragBase.value);
       } else {
@@ -158,6 +163,40 @@ export default function DayScreen() {
         dragY.value = withTiming(0, { duration: 180, easing: Easing.out(Easing.cubic) });
       }
     });
+
+  // With the axis at true 24h scale (no compression bands), a day's content
+  // can live well below the fold — open scrolled to the first item, capped
+  // at 7 AM (the week grid's opening hour). Empty days stay at the top so
+  // the "Nothing due" message is the first thing seen. Phones only: the
+  // wide layout's task pane starts at the top already.
+  const scrollRef = useRef<ScrollView>(null);
+  const initialScrollY = useMemo(() => {
+    if (isWide) return 0;
+    const hours = [
+      ...dayEvents.filter((e) => !e.allDay).map((e) => e.start.getHours()),
+      ...dayTasks.filter((t) => t.dueDate).map((t) => t.dueDate!.getHours()),
+    ];
+    if (hours.length === 0) return 0;
+    return Math.min(7, ...hours) * DAY_TIMELINE_PX_PER_HOUR;
+  }, [isWide, dayEvents, dayTasks]);
+
+  // Keyed on initialScrollY too, NOT just mount: on a cold load the task and
+  // event queries resolve after the first render, so the target is 0 until
+  // data lands (and the timeline has no height to scroll into yet). Once per
+  // shown day — later refetches must never yank the user's scroll position.
+  const scrolledFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (scrolledFor.current === (date ?? null) || initialScrollY <= 0) return;
+    const timer = setTimeout(() => {
+      scrolledFor.current = date ?? null;
+      scrollRef.current?.scrollTo({ y: initialScrollY, animated: false });
+      // Mirror into the drag-dismiss gate in case onScroll skips the
+      // programmatic jump — a stale 0 would offer dismissal mid-list.
+      scrollTop.value = initialScrollY;
+    }, 60);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, initialScrollY]);
 
   const title = day.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
@@ -244,6 +283,7 @@ export default function DayScreen() {
           </View>
           <GestureDetector gesture={scrollGesture}>
             <ScrollView
+              ref={scrollRef}
               bounces={false}
               // Wide: the scroller itself is the centered column so clicks
               // beside it land on the dismiss backdrop.
@@ -254,9 +294,12 @@ export default function DayScreen() {
               scrollEventThrottle={16}
               contentContainerStyle={{ padding: space.s4, paddingTop: 0, gap: space.s3, flexGrow: 1 }}
               showsVerticalScrollIndicator={false}>
-              {dayTasks.length === 0 && dayEvents.length === 0 ? (
+              {/* The empty message stays at the TOP (developer 2026-09-09) —
+                  on phones the full 24h axis still renders beneath it. */}
+              {dayTasks.length === 0 && dayEvents.length === 0 && (
                 <Text style={[type.body, { color: colors.textSecondary }]}>Nothing due this day.</Text>
-              ) : isWide ? (
+              )}
+              {isWide && dayTasks.length === 0 && dayEvents.length === 0 ? null : isWide ? (
                 /* Wide screens: two panes — the timeline of EVENTS on the
                    left, tasks as NORMAL full-size cards on the right, ordered
                    by time (developer design 2026-07-22 v2). Panes STRETCH to
@@ -320,8 +363,8 @@ export default function DayScreen() {
                 </View>
               ) : (
                 /* Phones: ONE full-width timeline — events and tasks
-                   interleaved by time; long empty stretches collapse into a
-                   small "N hr" band so a sparse day stays compact. */
+                   interleaved by time on the full 24h axis, hour lines
+                   drawn even where nothing sits (developer 2026-09-09). */
                 <>
                   {dayEvents.filter((e) => e.allDay).map((event) => (
                     <EventCard

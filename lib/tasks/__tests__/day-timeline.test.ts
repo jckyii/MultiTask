@@ -40,6 +40,18 @@ describe('layoutDayTimeline — axis', () => {
     expect(layout.height).toBe(0);
     expect(layout.hours).toEqual([]);
   });
+
+  it('fullDay renders the whole 24h axis even with nothing on it (2026-09-09)', () => {
+    const layout = layoutDayTimeline([], [], 'merged', {
+      ...CFG,
+      fullDay: true,
+      gapThresholdHours: Infinity,
+    });
+    expect(layout.hours[0].hour).toBe(0);
+    expect(layout.hours[layout.hours.length - 1].hour).toBe(24);
+    expect(layout.gaps).toEqual([]);
+    expect(layout.height).toBe(24 * CFG.pxPerHour);
+  });
 });
 
 describe('layoutDayTimeline — gap compression', () => {

@@ -97,7 +97,10 @@ export function layoutDayTimeline(
       ? tasks.map((t) => ({ id: t.id, dueH: hourOf(t.due) })).sort((a, b) => a.dueH - b.dueH || a.id - b.id)
       : [];
 
-  if (timed.length === 0 && dated.length === 0) return { ...EMPTY, allDayIds };
+  // fullDay axes render even with nothing on them (developer 2026-09-09:
+  // an empty day still shows all 24 hour lines) — the sentinels below are
+  // enough to build the axis. Non-fullDay callers keep the empty layout.
+  if (timed.length === 0 && dated.length === 0 && !config.fullDay) return { ...EMPTY, allDayIds };
 
   // Busy coverage. A task row occupies real pixels, so for axis/gap purposes
   // it "uses" the hours its row will cover.

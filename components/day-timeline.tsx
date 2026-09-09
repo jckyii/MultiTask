@@ -21,15 +21,19 @@ import type { Task } from '@/lib/tasks/types';
 import { readableTextColor } from '@/lib/theme/pill-colors';
 import { useTheme } from '@/lib/theme/use-theme';
 
+/** Exported for the day page's initial-scroll math (scroll to the first
+ *  item once the axis stopped compressing empty hours). */
+export const DAY_TIMELINE_PX_PER_HOUR = 64;
+
 const CONFIG: TimelineConfig = {
-  pxPerHour: 64,
+  pxPerHour: DAY_TIMELINE_PX_PER_HOUR,
   taskHeight: 56,
   taskGap: 6,
   minEventHeight: 30,
-  // Developer direction (2026-08-15): the axis spans the WHOLE day
-  // (12am-11:59pm) and empty stretches of 3h+ compress into quiet "N hr"
-  // bands — busy areas keep true scale, so nothing looks squished.
-  gapThresholdHours: 3,
+  // Developer direction (2026-09-09, reversing the 2026-08-15 bands): the
+  // axis spans the WHOLE day at TRUE scale — every hour line renders, empty
+  // stretches included. Infinity disables the "N hr" compression bands.
+  gapThresholdHours: Infinity,
   fullDay: true,
   gapBandPx: 44,
 };
