@@ -242,6 +242,40 @@ export function useImportTasks() {
  *  as the distinct `category` values across your tasks — so "deleting" one
  *  clears it off every task that carries it (back to Uncategorized).
  *  Optimistic, so the chip disappears from the form immediately. */
+/** Edit a lifestyle's name and/or color across every task that carries it
+ *  (developer request 2026-09-09: the edit button on the lifestyle box).
+ *  Same dual-mode shape as delete. */
+export function useUpdateCategoryStyle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: TASKS_MUTATION_KEY,
+    mutationFn: async ({ from, name, color }: { from: string; name: string; color: string }) => {
+      const db = syncDb();
+      if (db) {
+        await db.execute('UPDATE task SET category=?, category_color=? WHERE category=?', [
+          name,
+          color,
+          from,
+        ]);
+        return;
+      }
+      const { error } = await supabase
+        .from('task')
+        .update({ category: name, category_color: color })
+        .eq('category', from);
+      if (error) throw error;
+    },
+    onMutate: ({ from, name, color }) =>
+      applyOptimistic(queryClient, (tasks) =>
+        tasks.map((t) =>
+          t.category === from ? { ...t, category: name, categoryColor: color } : t
+        )
+      ),
+    onError: (_error, _vars, context) => rollback(queryClient, context),
+    onSettled: () => settleInvalidate(queryClient),
+  });
+}
+
 export function useDeleteCategory() {
   const queryClient = useQueryClient();
   return useMutation({

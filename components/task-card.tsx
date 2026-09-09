@@ -21,8 +21,8 @@ type Props = {
   onDelete?: (task: Task) => void;
   onPress?: (task: Task) => void;
   onLongPress?: (task: Task) => void;
-  /** Desktop day page shows descriptions inline (the space exists there);
-   *  phone cards keep description in the detail view only. */
+  /** No-op since 2026-09-09: notes now always render on the card's right
+   *  side, on every surface. Kept so existing call sites don't churn. */
   showDescription?: boolean;
 };
 
@@ -82,10 +82,31 @@ export function TaskCard({ task, onToggleComplete, onDelete, onPress, onLongPres
       ]}>
       {accentBar && <View style={[styles.accentBar, { backgroundColor: accentBar }]} />}
 
+      {/* Notes live on the card's empty right side (developer 2026-09-09):
+          quiet caption text that informs without competing — never bold,
+          never colored, clipped before it can crowd the title column. */}
+      {task.description.length > 0 && (
+        <View pointerEvents="none" style={styles.notesColumn}>
+          <Text
+            numberOfLines={3}
+            maxFontSizeMultiplier={1.2}
+            style={[type.caption, { color: colors.textTertiary, fontWeight: '400', textAlign: 'right' }]}>
+            {task.description}
+          </Text>
+        </View>
+      )}
+
       {/* Muted look for done/trashed tasks: fade the CONTENT only. The card
           surface stays opaque — a translucent card lets the swipe trails
           behind it bleed through (visible flicker when wiggled). */}
-      <View style={[styles.content, { opacity: task.isCompleted || task.deletedAt ? 0.55 : 1 }]}>
+      <View
+        style={[
+          styles.content,
+          {
+            opacity: task.isCompleted || task.deletedAt ? 0.55 : 1,
+            paddingRight: task.description.length > 0 ? '38%' : 0,
+          },
+        ]}>
         <Text
           numberOfLines={2}
           style={[type.h2, { color: colors.textPrimary }, task.isCompleted && styles.titleCompleted]}>
@@ -117,12 +138,6 @@ export function TaskCard({ task, onToggleComplete, onDelete, onPress, onLongPres
             {task.dueDate ? formatDueDate(task.dueDate) : 'No due date'}
           </Text>
         </View>
-
-        {showDescription && task.description.length > 0 && (
-          <Text numberOfLines={4} style={[type.body, { color: colors.textSecondary, marginTop: 2 }]}>
-            {task.description}
-          </Text>
-        )}
 
         <View style={[styles.pillRow, { gap: space.s2, marginTop: space.s2 }]}>
           {task.priority != null && <PriorityBadge priority={task.priority} />}
@@ -166,6 +181,14 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 4,
+  },
+  notesColumn: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    bottom: 12,
+    width: '36%',
+    justifyContent: 'center',
   },
   titleCompleted: {
     textDecorationLine: 'line-through',

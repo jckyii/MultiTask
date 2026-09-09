@@ -51,7 +51,17 @@ export function LifestylePill({
   subjectColor: string;
 }) {
   const { isDark } = useTheme();
-  if (!subject) return <Pill label={lifestyle} color={lifestyleColor} />;
+  if (!subject) {
+    // SOLID even alone (developer 2026-09-09): lifestyles read solid,
+    // subjects read pastel — the fill IS the distinction.
+    return (
+      <View style={[styles.pill, { backgroundColor: lifestyleColor, borderColor: lifestyleColor }]}>
+        <Text style={[styles.label, { color: textOnSolid(lifestyleColor) }]} numberOfLines={1}>
+          {lifestyle}
+        </Text>
+      </View>
+    );
+  }
   const sub = pillColors(subjectColor, isDark);
   return (
     <View style={styles.combinedRow}>

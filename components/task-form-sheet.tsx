@@ -37,7 +37,7 @@ import { confirmDialog } from '@/lib/confirm';
 import { TASK_DESCRIPTION_MAX, TASK_TITLE_MAX } from '@/lib/limits';
 import { endOfToday } from '@/lib/tasks/dates';
 import { lifestyleGroups } from '@/lib/tasks/lifestyles';
-import { useDeleteCategory, useDeleteSubject, useTasks } from '@/lib/tasks/use-tasks';
+import { useDeleteCategory, useDeleteSubject, useTasks, useUpdateCategoryStyle } from '@/lib/tasks/use-tasks';
 import { useWideNative } from '@/hooks/use-wide-layout';
 import { tabletSheet } from '@/lib/theme/layout';
 import { priorityTiers } from '@/lib/theme/tokens';
@@ -131,14 +131,40 @@ function SelectChip({
   );
 }
 
-/** Inline creator for a new category/subject: a name field with an Add button
- *  at its end, then the swatch palette. The explicit button matters — tapping
- *  away from a field never "submits" it, so relying on the keyboard's Done key
- *  alone silently lost the name (reported 2026-07-21). Enter still works too. */
-function NewOptionCreator({ placeholder, onCreate }: { placeholder: string; onCreate: (option: NamedColor) => void }) {
+/** Inline creator/editor for lifestyles and subjects: a name field with a
+ *  commit button at its end, then the swatch palette. Colors already used
+ *  by siblings are hidden (developer 2026-09-09: once picked, a color
+ *  cannot be picked again) and the default is the next available one.
+ *  Enter only dismisses the keyboard — commit happens via the button, so
+ *  nobody creates an option before picking a color (developer 2026-09-09,
+ *  reversing the 2026-08-02 Enter-commits behavior). */
+function NewOptionCreator({
+  placeholder,
+  onCreate,
+  usedColors = [],
+  initialName,
+  initialColor,
+  submitLabel = 'Add',
+  onFocusScroll,
+}: {
+  placeholder: string;
+  onCreate: (option: NamedColor) => void;
+  /** Swatches to hide (already taken by siblings). */
+  usedColors?: string[];
+  initialName?: string;
+  initialColor?: string;
+  submitLabel?: string;
+  /** Called when the name field focuses — the sheet scrolls the palette
+   *  into view above the keyboard. */
+  onFocusScroll?: () => void;
+}) {
   const { colors, space, radius, type } = useTheme();
-  const [name, setName] = useState('');
-  const [color, setColor] = useState(SWATCHES[7]);
+  // The current color stays available while editing; everything else taken
+  // by a sibling is hidden. All-taken falls back to the full palette.
+  const available = SWATCHES.filter((s) => s === initialColor || !usedColors.includes(s));
+  const swatches = available.length ? available : SWATCHES;
+  const [name, setName] = useState(initialName ?? '');
+  const [color, setColor] = useState(initialColor ?? swatches[0]);
   const canAdd = name.trim().length > 0;
 
   function create() {
@@ -167,20 +193,14 @@ function NewOptionCreator({ placeholder, onCreate }: { placeholder: string; onCr
           value={name}
           onChangeText={setName}
           returnKeyType="done"
-          // Enter commits THE BADGE, never the task (developer report
-          // 2026-08-02). blurOnSubmit={false} keeps the event contained —
-          // the keyboard stays put and no follow-on submit can fire.
-          blurOnSubmit={false}
-          onSubmitEditing={(event) => {
-            event.preventDefault?.();
-            create();
-          }}
+          onFocus={onFocusScroll}
+          onSubmitEditing={() => Keyboard.dismiss()}
         />
         <Pressable
           onPress={create}
           disabled={!canAdd}
           accessibilityRole="button"
-          accessibilityLabel="Add"
+          accessibilityLabel={submitLabel}
           style={({ pressed }) => ({
             minHeight: 40,
             paddingHorizontal: space.s4,
@@ -190,11 +210,11 @@ function NewOptionCreator({ placeholder, onCreate }: { placeholder: string; onCr
             justifyContent: 'center',
             opacity: !canAdd ? 0.4 : pressed ? 0.85 : 1,
           })}>
-          <Text style={[type.body, { color: colors.textOnAccent, fontWeight: '600' }]}>Add</Text>
+          <Text style={[type.body, { color: colors.textOnAccent, fontWeight: '600' }]}>{submitLabel}</Text>
         </Pressable>
       </View>
       <View style={[styles.wrapRow, { gap: space.s2 }]}>
-        {SWATCHES.map((swatch) => (
+        {swatches.map((swatch) => (
           <Pressable
             key={swatch}
             onPress={() => setColor(swatch)}
@@ -266,10 +286,13 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     return () => clearTimeout(timer);
   }, [tourActive, tourIndex, detailsOpen]);
   const [creating, setCreating] = useState<'lifestyle' | 'subject' | null>(null);
-  // The lifestyle box currently EXPANDED in the selector (null = list or
-  // stacked summary). Expanding IS selecting (developer spec 2026-08-26);
-  // tapping the expanded box again clears the selection.
-  const [activeLifestyle, setActiveLifestyle] = useState<string | null>(null);
+  // Selector v2 (developer spec 2026-09-09): the box currently HOVERED
+  // open (showing its subjects) - hovering previews, it does NOT select.
+  // Selection happens by tapping a subject, or tapping the hovered
+  // lifestyle itself. On the computer, mouse hover drives this directly.
+  const [hoverLifestyle, setHoverLifestyle] = useState<string | null>(null);
+  // Lifestyle whose inline name+color editor is open (the pencil button).
+  const [editingLifestyle, setEditingLifestyle] = useState<string | null>(null);
   // Options created in this session, so they render immediately (they
   // become "existing" once a task is saved with them). Extra subjects are
   // keyed by their lifestyle — a subject can't exist without one.
@@ -282,6 +305,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
   // (lib/tasks/lifestyles.ts) plus this session's creations.
   const { data: tasks } = useTasks();
   const deleteCategory = useDeleteCategory();
+  const updateCategoryStyle = useUpdateCategoryStyle();
   const deleteSubject = useDeleteSubject();
   const toast = useUndoToast();
   const groups = useMemo(() => {
@@ -451,7 +475,8 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
         setCategory(null);
         setSubject(null);
       }
-      if (activeLifestyle === option.name) setActiveLifestyle(null);
+      if (hoverLifestyle === option.name) setHoverLifestyle(null);
+      if (editingLifestyle === option.name) setEditingLifestyle(null);
       if (inUse > 0) deleteCategory.mutate(option.name);
     } else {
       setExtraSubjectsByLifestyle((prev) => {
@@ -465,6 +490,91 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     toast.show({ message: `${kind === 'lifestyle' ? 'Lifestyle' : 'Subject'} deleted.` });
   }
 
+  // Selector v2 interactions (developer spec 2026-09-09).
+  const lifestyleUsedColors = groups.map((g) => g.color);
+
+  function onLifestyleTap(g: { name: string; color: string }) {
+    animateListChanges();
+    if (hoverLifestyle !== g.name) {
+      // First tap = hover open (preview, not selection).
+      setHoverLifestyle(g.name);
+      setCreating(null);
+      setEditingLifestyle(null);
+      return;
+    }
+    if (category?.name === g.name) {
+      // Re-opened the selected lifestyle and tapped it again: deselect.
+      setCategory(null);
+      setSubject(null);
+      setHoverLifestyle(null);
+      setCreating(null);
+      setEditingLifestyle(null);
+      return;
+    }
+    // Second tap on the hovered box: confirm lifestyle-only.
+    setCategory({ name: g.name, color: g.color });
+    setSubject(null);
+    setHoverLifestyle(null);
+    setCreating(null);
+    setEditingLifestyle(null);
+    emitTourEvent('form-category-set');
+  }
+
+  function onSubjectTap(g: { name: string; color: string }, s: NamedColor) {
+    animateListChanges();
+    if (subject?.name === s.name) {
+      // Tapping the selected subject unselects it (stay hovered).
+      setSubject(null);
+      return;
+    }
+    setCategory({ name: g.name, color: g.color });
+    setSubject(s);
+    setHoverLifestyle(null);
+    setCreating(null);
+    setEditingLifestyle(null);
+    emitTourEvent('form-category-set');
+    emitTourEvent('form-subject-set');
+  }
+
+  function saveLifestyleEdit(from: string, option: NamedColor) {
+    updateCategoryStyle.mutate({ from, name: option.name, color: option.color });
+    setExtraLifestyles((prev) => prev.map((x) => (x.name === from ? option : x)));
+    setExtraSubjectsByLifestyle((prev) => {
+      const next = new Map(prev);
+      const subjects = next.get(from);
+      if (subjects) {
+        next.delete(from);
+        next.set(option.name, subjects);
+      }
+      return next;
+    });
+    if (category?.name === from) setCategory(option);
+    setEditingLifestyle(null);
+    setHoverLifestyle(option.name);
+    toast.show({ message: 'Lifestyle updated.' });
+  }
+
+  /** Web only: mouse hover opens a lifestyle's subjects, hover-off closes
+   *  them (raw DOM handlers - RNW Pressable onHoverIn is unreliable with
+   *  nested pressables, the round-4 lesson). Creating/editing pins it open. */
+  function webHoverProps(name: string) {
+    if (!isWeb) return {};
+    return {
+      onMouseEnter: () => setHoverLifestyle(name),
+      onMouseLeave: () => {
+        if (creating === 'subject' || editingLifestyle) return;
+        setHoverLifestyle((h) => (h === name ? null : h));
+      },
+    } as Record<string, unknown>;
+  }
+
+  // The body ScrollView, so the selector can bring the swatch palette up
+  // above the keyboard and Details can reveal its full length.
+  const bodyScrollRef = useRef<ScrollView>(null);
+  function scrollToPalette() {
+    setTimeout(() => bodyScrollRef.current?.scrollToEnd({ animated: true }), 260);
+  }
+
   // Date/time picker reveal — animated height, slide open/closed.
   const [picker, setPickerRaw] = useState<'date' | 'time' | null>(null);
   const [renderedPicker, setRenderedPicker] = useState<'date' | 'time' | null>(null);
@@ -473,6 +583,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
   const PICKER_HEIGHTS = isWeb ? ({ date: 56, time: 56 } as const) : ({ date: 360, time: 216 } as const);
 
   function setPicker(next: 'date' | 'time' | null) {
+    if (next) Keyboard.dismiss();
     setPickerRaw(next);
     if (Platform.OS === 'android') {
       // Android pickers are system dialogs — nothing inline to animate.
@@ -617,6 +728,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
 
         <GestureDetector gesture={bodyScrollGesture}>
         <ScrollView
+          ref={bodyScrollRef}
           // The ScrollView clips at its bounds, which used to force the tour
           // rings to ringPadX 0 - the border then painted over the leading
           // letters of "Priority"/"Category" (developer report 2026-08-17).
@@ -732,7 +844,12 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
             onPress={() => {
               // Emit OUTSIDE the state updater — updaters run during render,
               // and advancing the tour from render gets dropped by React.
-              if (!detailsOpen) emitTourEvent('form-details-open');
+              if (!detailsOpen) {
+                emitTourEvent('form-details-open');
+                // Reveal the WHOLE details run down to the notes field
+                // (developer 2026-09-09), like the calendar does.
+                setTimeout(() => bodyScrollRef.current?.scrollToEnd({ animated: true }), 320);
+              }
               setDetailsOpen((open) => !open);
             }}
             accessibilityRole="button"
@@ -772,20 +889,32 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
               </TourAnchor>
               </View>
 
-              {/* THE LIFESTYLE SELECTOR (developer revamp 2026-08-26).
-                  States: summary (something picked) / list (nothing picked) /
-                  expanded (one lifestyle open, its subjects + "+new" inside;
-                  the other lifestyles slide away underneath). Expanding IS
-                  selecting; tapping the expanded box again clears it. */}
+              {/* THE LIFESTYLE SELECTOR v2 (developer spec 2026-09-09).
+                  Tap once = HOVER: the box opens and previews its subjects
+                  (on the computer, mouse hover does this by itself, and
+                  hover-off closes it). While hovered: tap a subject to
+                  confirm lifestyle+subject, or tap the lifestyle again to
+                  confirm lifestyle-only. Confirming collapses the rest away
+                  (animated), leaving the stacked summary. Re-opening the
+                  selected lifestyle and tapping it again clears the
+                  selection. Tapping the selected subject unselects just the
+                  subject. The pencil edits a lifestyle's name and color. */}
               <View style={{ gap: space.s2 }}>
               <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Lifestyle</Text>
               <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-lifestyle">
               <View style={{ gap: space.s2 }}>
-                {category && activeLifestyle === null ? (
-                  // STACKED summary: the subject box with the lifestyle's
-                  // color bar peeking at its top (the ( a ( b ) overlap).
+                {category && hoverLifestyle === null ? (
+                  // STACKED summary: the chosen subject (or lifestyle) with
+                  // the lifestyle's color bar peeking at the top.
                   <RightClickMenu
                     items={[
+                      {
+                        label: `Edit lifestyle “${category.name}”`,
+                        onPress: () => {
+                          setHoverLifestyle(category.name);
+                          setEditingLifestyle(category.name);
+                        },
+                      },
                       ...(subject
                         ? [{ label: `Delete subject “${subject.name}”`, destructive: true, onPress: () => removeOption('subject', subject) }]
                         : []),
@@ -794,7 +923,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                   <Pressable
                     onPress={() => {
                       animateListChanges();
-                      setActiveLifestyle(category.name);
+                      setHoverLifestyle(category.name);
                     }}
                     onLongPress={() =>
                       removeOption(subject ? 'subject' : 'lifestyle', subject ?? category)
@@ -818,113 +947,123 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                     </View>
                   </Pressable>
                   </RightClickMenu>
-                ) : activeLifestyle !== null ? (
-                  // EXPANDED: only the active lifestyle shows; subjects
-                  // (alphabetical) inside, "+new" always last and open.
-                  (() => {
-                    const group = groups.find((g) => g.name === activeLifestyle);
-                    if (!group) return null;
-                    return (
-                      <View style={[styles.lifestyleBox, { borderColor: colors.accent, borderRadius: radius.button }]}>
-                        <RightClickMenu
-                          items={[{ label: `Delete lifestyle “${group.name}”`, destructive: true, onPress: () => removeOption('lifestyle', { name: group.name, color: group.color }) }]}>
-                        <Pressable
-                          onPress={() => {
-                            // Second tap clears the selection (spec).
-                            animateListChanges();
-                            setCategory(null);
-                            setSubject(null);
-                            setActiveLifestyle(null);
-                            setCreating(null);
-                          }}
-                          onLongPress={() => removeOption('lifestyle', { name: group.name, color: group.color })}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: true }}
-                          accessibilityLabel={`Lifestyle ${group.name} selected. Tap to clear.`}>
-                          <View style={[styles.lifestyleBar, { backgroundColor: group.color }]} />
-                          <View style={[styles.lifestyleBody, { paddingHorizontal: space.s3 }]}>
-                            <Text style={[type.body, { color: colors.textPrimary, fontWeight: '600' }]} numberOfLines={1}>
-                              {group.name}
-                            </Text>
-                          </View>
-                        </Pressable>
-                        </RightClickMenu>
-                        <View style={[styles.subjectList, { paddingHorizontal: space.s3, paddingBottom: space.s3, gap: space.s2 }]}>
-                          <View style={[styles.wrapRow, { gap: space.s2 }]}>
-                            {group.subjects.map((s) => (
-                              <SelectChip
-                                key={s.name}
-                                label={s.name}
-                                color={s.color}
-                                selected={subject?.name === s.name}
-                                onPress={() => {
-                                  animateListChanges();
-                                  setSubject(s);
-                                  setActiveLifestyle(null);
-                                  setCreating(null);
-                                  emitTourEvent('form-subject-set');
-                                }}
-                                onDelete={() => removeOption('subject', s)}
-                                deleteLabel={`Delete subject “${s.name}”`}
-                              />
-                            ))}
-                            <SelectChip
-                              label="＋new"
-                              selected={creating === 'subject'}
-                              onPress={() => setCreating(creating === 'subject' ? null : 'subject')}
-                            />
-                          </View>
-                          {creating === 'subject' && (
-                            <NewOptionCreator
-                              placeholder="New subject name"
-                              onCreate={(option) => {
-                                setExtraSubjectsByLifestyle((prev) => {
-                                  const next = new Map(prev);
-                                  next.set(group.name, [...(next.get(group.name) ?? []), option]);
-                                  return next;
-                                });
-                                animateListChanges();
-                                setSubject(option);
-                                setActiveLifestyle(null);
-                                setCreating(null);
-                                emitTourEvent('form-subject-set');
-                              }}
-                            />
-                          )}
-                        </View>
-                      </View>
-                    );
-                  })()
                 ) : (
-                  // LIST: every lifestyle (alphabetical) + "+ New" last.
+                  // LIST: every lifestyle stays visible; the hovered one
+                  // opens (CollapsibleReveal animates the expand/collapse).
                   <View style={{ gap: space.s2 }}>
-                    {groups.map((g) => (
-                      <RightClickMenu
-                        key={g.name}
-                        items={[{ label: `Delete lifestyle “${g.name}”`, destructive: true, onPress: () => removeOption('lifestyle', { name: g.name, color: g.color }) }]}>
-                      <Pressable
-                        onPress={() => {
-                          // Expanding IS selecting (spec) — the subjects
-                          // drop down automatically.
-                          animateListChanges();
-                          setCategory({ name: g.name, color: g.color });
-                          setSubject(null);
-                          setActiveLifestyle(g.name);
-                          emitTourEvent('form-category-set');
-                        }}
-                        onLongPress={() => removeOption('lifestyle', { name: g.name, color: g.color })}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Lifestyle ${g.name}, ${g.subjects.length} subjects`}
-                        style={[styles.lifestyleBox, { borderColor: colors.borderSubtle, borderRadius: radius.button }]}>
-                        <View style={[styles.lifestyleBar, { backgroundColor: g.color }]} />
-                        <View style={[styles.lifestyleBody, { paddingHorizontal: space.s3 }]}>
-                          <Text style={[type.body, { color: colors.textPrimary }]} numberOfLines={1}>
-                            {g.name}
-                          </Text>
+                    {groups.map((g) => {
+                      const open = hoverLifestyle === g.name;
+                      const isChosen = category?.name === g.name;
+                      return (
+                        <RightClickMenu
+                          key={g.name}
+                          items={[
+                            {
+                              label: `Edit lifestyle “${g.name}”`,
+                              onPress: () => {
+                                setHoverLifestyle(g.name);
+                                setEditingLifestyle(g.name);
+                              },
+                            },
+                            { label: `Delete lifestyle “${g.name}”`, destructive: true, onPress: () => removeOption('lifestyle', { name: g.name, color: g.color }) },
+                          ]}>
+                        <View
+                          style={[
+                            styles.lifestyleBox,
+                            { borderColor: open ? colors.accent : colors.borderSubtle, borderRadius: radius.button },
+                          ]}
+                          {...webHoverProps(g.name)}>
+                          {/* The pencil is a SIBLING of the header press, not a
+                              child — a Pressable inside a Pressable renders
+                              button-in-button on web (invalid HTML, React 19
+                              hydration error). */}
+                          <View style={[styles.lifestyleBar, { backgroundColor: g.color }]} />
+                          <View style={styles.lifestyleHeaderRow}>
+                            <Pressable
+                              onPress={() => onLifestyleTap(g)}
+                              onLongPress={() => removeOption('lifestyle', { name: g.name, color: g.color })}
+                              accessibilityRole="button"
+                              accessibilityState={{ selected: isChosen, expanded: open }}
+                              accessibilityLabel={
+                                open
+                                  ? `Lifestyle ${g.name} open. Tap ${isChosen ? 'to clear the selection' : 'again to select it'}, or pick a subject.`
+                                  : `Lifestyle ${g.name}, ${g.subjects.length} subjects. Tap to open.`
+                              }
+                              style={{ flex: 1 }}>
+                              <View style={[styles.lifestyleBody, { paddingHorizontal: space.s3 }]}>
+                                <Text
+                                  style={[type.body, { color: colors.textPrimary, fontWeight: open ? '600' : '400', flexShrink: 1 }]}
+                                  numberOfLines={1}>
+                                  {g.name}
+                                </Text>
+                              </View>
+                            </Pressable>
+                            {open && !editingLifestyle && (
+                              <Pressable
+                                onPress={() => setEditingLifestyle(g.name)}
+                                hitSlop={10}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Edit lifestyle ${g.name}`}
+                                style={[styles.lifestylePencil, { paddingRight: space.s3 }]}>
+                                <IconSymbol name="pencil" size={16} color={colors.textSecondary} />
+                              </Pressable>
+                            )}
+                          </View>
+                          <CollapsibleReveal open={open}>
+                            <View style={[styles.subjectList, { paddingHorizontal: space.s3, paddingBottom: space.s3, gap: space.s2 }]}>
+                              {editingLifestyle === g.name ? (
+                                <NewOptionCreator
+                                  placeholder="Lifestyle name"
+                                  initialName={g.name}
+                                  initialColor={g.color}
+                                  submitLabel="Save"
+                                  usedColors={lifestyleUsedColors.filter((c) => c !== g.color)}
+                                  onFocusScroll={scrollToPalette}
+                                  onCreate={(option) => saveLifestyleEdit(g.name, option)}
+                                />
+                              ) : (
+                                <>
+                                  <View style={[styles.wrapRow, { gap: space.s2 }]}>
+                                    {g.subjects.map((s) => (
+                                      <SelectChip
+                                        key={s.name}
+                                        label={s.name}
+                                        color={s.color}
+                                        selected={subject?.name === s.name && isChosen}
+                                        onPress={() => onSubjectTap(g, s)}
+                                        onDelete={() => removeOption('subject', s)}
+                                        deleteLabel={`Delete subject “${s.name}”`}
+                                      />
+                                    ))}
+                                    <SelectChip
+                                      label="＋new"
+                                      selected={creating === 'subject'}
+                                      onPress={() => setCreating(creating === 'subject' ? null : 'subject')}
+                                    />
+                                  </View>
+                                  {creating === 'subject' && (
+                                    <NewOptionCreator
+                                      placeholder="New subject name"
+                                      usedColors={g.subjects.map((s) => s.color)}
+                                      onFocusScroll={scrollToPalette}
+                                      onCreate={(option) => {
+                                        setExtraSubjectsByLifestyle((prev) => {
+                                          const next = new Map(prev);
+                                          next.set(g.name, [...(next.get(g.name) ?? []), option]);
+                                          return next;
+                                        });
+                                        onSubjectTap(g, option);
+                                      }}
+                                    />
+                                  )}
+                                </>
+                              )}
+                            </View>
+                          </CollapsibleReveal>
                         </View>
-                      </Pressable>
-                      </RightClickMenu>
-                    ))}
+                        </RightClickMenu>
+                      );
+                    })}
                     <SelectChip
                       label="＋ New"
                       selected={creating === 'lifestyle'}
@@ -933,12 +1072,16 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                     {creating === 'lifestyle' && (
                       <NewOptionCreator
                         placeholder="New lifestyle name"
+                        usedColors={lifestyleUsedColors}
+                        onFocusScroll={scrollToPalette}
                         onCreate={(option) => {
                           setExtraLifestyles((prev) => [...prev, option]);
                           animateListChanges();
                           setCategory(option);
                           setSubject(null);
-                          setActiveLifestyle(option.name);
+                          // Leave the new lifestyle OPEN so its ＋new subject
+                          // chip is right there (the tour walks into it).
+                          setHoverLifestyle(option.name);
                           setCreating(null);
                           emitTourEvent('form-category-set');
                         }}
@@ -969,6 +1112,9 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                 onChangeText={setDescription}
                 maxLength={TASK_DESCRIPTION_MAX}
                 multiline
+                returnKeyType="done"
+                blurOnSubmit
+                onSubmitEditing={() => Keyboard.dismiss()}
               />
               </TourAnchor>
               </View>
@@ -1072,6 +1218,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   subjectList: {},
+  lifestyleHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  lifestylePencil: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+  },
   subjectDot: {
     width: 10,
     height: 10,

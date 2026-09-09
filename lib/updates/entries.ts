@@ -15,6 +15,18 @@ export type UpdateEntry = {
 
 export const UPDATE_ENTRIES: UpdateEntry[] = [
   {
+    date: 'September 9, 2026',
+    title: 'Picking a lifestyle feels right now',
+    points: [
+      'Choosing a lifestyle is a preview first. Tap one and it opens to show its subjects without committing you to anything. Tap a subject to lock in both, or tap the lifestyle again to take it on its own. On the computer just moving the mouse over a lifestyle opens it, and moving away closes it.',
+      'Tapping the subject you already picked unselects just the subject, and tapping your chosen lifestyle again clears the whole pick.',
+      'Every lifestyle now has a pencil for editing its name and color right in place, and the color palette only offers colors no other lifestyle is using, for new ones and edits alike.',
+      'A task with only a lifestyle now wears the full solid color on its badge, so lifestyles always read solid and subjects always read soft.',
+      'Notes on a task now show quietly on the right side of the card, so you can read them without opening the task.',
+      'Pressing enter in the notes field or a name field now just puts the keyboard away instead of doing anything surprising.',
+    ],
+  },
+  {
     date: 'August 27, 2026',
     title: 'Lifestyles',
     points: [
