@@ -16,7 +16,7 @@ const CONTACT = 'yijack56@gmail.com';
 const SECTIONS: { title: string; body: string }[] = [
   {
     title: 'What Multitask collects',
-    body: 'Your account email and password, the things you create in the app such as tasks, events, categories and daily tasks, and a profile photo if you choose to add one. Passwords are handled by our sign in provider and we never see them. That is the whole list. There are no ads in the app, no tracking across other apps or websites, and your data is never sold.',
+    body: 'Your account email and password, the things you create in the app such as tasks, events, lifestyles and recurring tasks, and a profile photo if you choose to add one. Passwords are handled by our sign in provider and we never see them. That is the whole list. There are no ads in the app, no tracking across other apps or websites, and your data is never sold.',
   },
   {
     title: 'Where your data lives',

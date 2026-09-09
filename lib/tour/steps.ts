@@ -167,7 +167,7 @@ export const TOUR_STEPS: TourStep[] = [
     host: 'tabs',
     anchor: 'daily-add',
     tab: '/daily',
-    title: 'Add a daily',
+    title: 'Add a recurring task',
     body: 'Tap the dashed row, give it a name, and add it.',
     placement: 'bottom',
     dim: true,

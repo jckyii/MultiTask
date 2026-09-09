@@ -32,9 +32,12 @@ export type SwipeAction = {
 
 type Props = PropsWithChildren<{
   rightAction: SwipeAction;
-  leftAction: SwipeAction;
+  /** Omit both left props to disable the delete side entirely — no right
+   *  edge zone renders (recurring rows since 2026-09-09: removal moved to
+   *  the right-click menu on desktop). */
+  leftAction?: SwipeAction;
   onSwipeRight: () => void;
-  onSwipeLeft: () => void;
+  onSwipeLeft?: () => void;
   resetKey: string | number;
   enterFrom?: 'left' | 'right' | null;
   onEntered?: () => void;
@@ -157,7 +160,7 @@ export function SwipeableRow({
     if (commitTimeout.current) clearTimeout(commitTimeout.current);
     commitTimeout.current = setTimeout(() => {
       if (side === 'left') onSwipeRight();
-      else onSwipeLeft();
+      else onSwipeLeft?.();
     }, 250);
   }
 
@@ -178,12 +181,14 @@ export function SwipeableRow({
           <IconSymbol name={rightAction.icon} size={22} color={colors.textOnAccent} />
         </View>
       </Animated.View>
-      <Animated.View
-        style={[styles.trail, { backgroundColor: leftAction.color, borderRadius: radius.card }, leftTrailStyle]}>
-        <View style={styles.trailIconRight}>
-          <IconSymbol name={leftAction.icon} size={22} color={colors.textOnAccent} />
-        </View>
-      </Animated.View>
+      {leftAction && (
+        <Animated.View
+          style={[styles.trail, { backgroundColor: leftAction.color, borderRadius: radius.card }, leftTrailStyle]}>
+          <View style={styles.trailIconRight}>
+            <IconSymbol name={leftAction.icon} size={22} color={colors.textOnAccent} />
+          </View>
+        </Animated.View>
+      )}
 
       <Animated.View style={contentStyle}>
         {children}
@@ -215,15 +220,17 @@ export function SwipeableRow({
         onPress={() => commit('left')}
         accessibilityLabel="Complete or restore"
       />
-      <Pressable
-        style={[styles.edgeZone, styles.edgeRight]}
-        {...mouseHover(
-          () => setHoverSide('right'),
-          () => setHoverSide(null)
-        )}
-        onPress={() => commit('right')}
-        accessibilityLabel="Delete"
-      />
+      {onSwipeLeft != null && (
+        <Pressable
+          style={[styles.edgeZone, styles.edgeRight]}
+          {...mouseHover(
+            () => setHoverSide('right'),
+            () => setHoverSide(null)
+          )}
+          onPress={() => commit('right')}
+          accessibilityLabel="Delete"
+        />
+      )}
     </View>
   );
 }

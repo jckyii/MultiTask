@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EventCard } from '@/components/event-card';
+import { RightClickMenu } from '@/components/right-click-menu';
 import { TabPage } from '@/components/tab-pager';
 import { SwipeableRow } from '@/components/swipeable-row';
 import { TourAnchor } from '@/components/tour/tour-context';
@@ -29,6 +30,7 @@ import { useUndoToast } from '@/components/undo-toast';
 import { useTaskActions } from '@/hooks/use-task-actions';
 import { useToday } from '@/hooks/use-today';
 import { animateListChanges } from '@/lib/animate-layout';
+import { confirmDialog } from '@/lib/confirm';
 import { clearEnterMark, getEnterFrom, markEnter } from '@/lib/enter-marks';
 import { RECURRING_TITLE_MAX } from '@/lib/limits';
 import { useEvents } from '@/lib/events/use-events';
@@ -100,8 +102,9 @@ export default function DailyScreen() {
 
   // Same movement rules as regular tasks (docs/design/05 final values):
   // swipe right = check off (or un-check when in Done), row slides off and
-  // re-enters its new group from the right; swipe left = remove (archive)
-  // with an undo toast — no confirmation dialogs when undo exists.
+  // re-enters its new group from the right. Removal is NOT a swipe (developer
+  // 2026-09-09): long-press with a confirm on the phone, right-click on the
+  // computer — a left swipe kept deleting rows people only meant to nudge.
   function toggleDone(task: RecurringTask) {
     animateListChanges();
     markEnter(`rec:${task.id}`, 'right');
@@ -122,13 +125,26 @@ export default function DailyScreen() {
       onError: () => toast.show({ message: 'Couldn’t remove — check your connection.' }),
     });
     toast.show({
-      message: 'Daily task removed.',
+      message: 'Recurring task removed.',
       onUndo: () => {
         animateListChanges();
         markEnter(`rec:${task.id}`, 'right');
         unarchiveRecurring.mutate(task);
       },
     });
+  }
+
+  // The phone path: long-press asks first (a hidden gesture deserves a
+  // confirm), the computer's right-click menu deletes directly — the menu
+  // item names the action, so it already IS the confirmation.
+  async function confirmRemoveRecurring(task: RecurringTask) {
+    const confirmed = await confirmDialog({
+      title: 'Remove recurring task?',
+      message: `“${task.title}” will stop appearing every day.`,
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (confirmed) removeRecurring(task);
   }
 
   // Guards the Done-key + blur double-fire: pressing Done submits AND blurs
@@ -155,16 +171,22 @@ export default function DailyScreen() {
 
   function renderRecurringRow(task: RecurringTask) {
     return (
-      <SwipeableRow
+      <RightClickMenu
         key={task.id}
+        items={[
+          {
+            label: `Delete recurring task “${task.title}”`,
+            destructive: true,
+            onPress: () => removeRecurring(task),
+          },
+        ]}>
+      <SwipeableRow
         rightAction={
           task.doneToday
             ? { color: colors.accent, icon: 'arrow.uturn.backward' }
             : { color: colors.statusOngoingAccent, icon: 'checkmark' }
         }
-        leftAction={{ color: colors.statusOverdueAccent, icon: 'trash.fill' }}
         onSwipeRight={() => toggleDone(task)}
-        onSwipeLeft={() => removeRecurring(task)}
         resetKey={`rec:${task.id}|${task.doneToday}`}
         enterFrom={getEnterFrom(`rec:${task.id}`)}
         onEntered={() => clearEnterMark(`rec:${task.id}`)}
@@ -172,10 +194,11 @@ export default function DailyScreen() {
         hoverAuraRadius={999}>
         <Pressable
           onPress={() => tapToggleDone(task)}
+          onLongPress={() => confirmRemoveRecurring(task)}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: task.doneToday }}
           accessibilityLabel={task.title}
-          accessibilityActions={[{ name: 'delete', label: 'Remove daily task' }]}
+          accessibilityActions={[{ name: 'delete', label: 'Remove recurring task' }]}
           onAccessibilityAction={(event) => {
             if (event.nativeEvent.actionName === 'delete') removeRecurring(task);
           }}
@@ -200,6 +223,7 @@ export default function DailyScreen() {
           </Text>
         </Pressable>
       </SwipeableRow>
+      </RightClickMenu>
     );
   }
 
@@ -229,7 +253,7 @@ export default function DailyScreen() {
             ))}
           </View>
         ) : recurring.error ? (
-          <Text style={[type.body, { color: colors.textPrimary }]}>Couldn’t load daily tasks.</Text>
+          <Text style={[type.body, { color: colors.textPrimary }]}>Couldn’t load recurring tasks.</Text>
         ) : (
           <View style={{ gap: space.s2 }}>
             {pendingRecurring.map((task, i) => {
@@ -249,7 +273,7 @@ export default function DailyScreen() {
             })}
 
             {(recurring.data ?? []).length === 0 && (
-              <Text style={[type.body, { color: colors.textSecondary }]}>No daily tasks yet.</Text>
+              <Text style={[type.body, { color: colors.textSecondary }]}>No recurring tasks yet.</Text>
             )}
 
             {doneRecurring.length > 0 && (
@@ -277,7 +301,7 @@ export default function DailyScreen() {
                     paddingHorizontal: space.s4,
                   },
                 ]}
-                placeholder="Daily task title"
+                placeholder="Recurring task title"
                 placeholderTextColor={colors.textTertiary}
                 value={newTitle}
                 onChangeText={setNewTitle}
@@ -294,14 +318,14 @@ export default function DailyScreen() {
                   setAdding(true);
                 }}
                 accessibilityRole="button"
-                accessibilityLabel="New daily task"
+                accessibilityLabel="New recurring task"
                 style={[
                   styles.recurringRow,
                   styles.ghostRow,
                   { borderColor: colors.borderSubtle, paddingHorizontal: space.s4, gap: space.s3 },
                 ]}>
                 <IconSymbol name="plus" size={18} color={colors.textTertiary} />
-                <Text style={[type.body, { color: colors.textSecondary }]}>New daily task</Text>
+                <Text style={[type.body, { color: colors.textSecondary }]}>New recurring task</Text>
               </Pressable>
             )}
           </View>

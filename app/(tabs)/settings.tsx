@@ -176,7 +176,7 @@ export default function SettingsScreen() {
   async function deleteAccount() {
     const first = await confirmDialog({
       title: 'Delete your account?',
-      message: 'This permanently deletes your account, all tasks, events, and daily tasks on every device. There is no undo.',
+      message: 'This permanently deletes your account, all tasks, events, and recurring tasks on every device. There is no undo.',
       confirmLabel: 'Continue',
       destructive: true,
     });

@@ -45,9 +45,12 @@ export type SwipeAction = {
 
 type Props = PropsWithChildren<{
   rightAction: SwipeAction;
-  leftAction: SwipeAction;
+  /** Omit both left props to disable the left swipe entirely: the row
+   *  resists leftward drags and springs back (recurring rows since
+   *  2026-09-09 — their removal moved to long-press / right-click). */
+  leftAction?: SwipeAction;
   onSwipeRight: () => void;
-  onSwipeLeft: () => void;
+  onSwipeLeft?: () => void;
   /** Changes whenever the row's logical state changes (e.g. completed flag)
    *  so a recycled cell resets its gesture position. */
   resetKey: string | number;
@@ -121,18 +124,23 @@ export function SwipeableRow({
       onSwipeRight();
     } else {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      onSwipeLeft();
+      onSwipeLeft?.();
     }
   }
 
+  const hasLeft = onSwipeLeft != null;
   const pan = Gesture.Pan()
     // Horizontal intent only — vertical scrolling must always win.
     .activeOffsetX([-16, 16])
     .failOffsetY([-12, 12])
     .onUpdate((event) => {
-      translateX.value = event.translationX;
+      // No left action: leftward drags meet rubber-band resistance instead
+      // of tracking 1:1, so the row itself teaches that nothing lives there.
+      translateX.value =
+        !hasLeft && event.translationX < 0 ? event.translationX * 0.18 : event.translationX;
       const threshold = screenWidth * THRESHOLD_FRACTION;
-      const direction = event.translationX > threshold ? 1 : event.translationX < -threshold ? -1 : 0;
+      const direction =
+        event.translationX > threshold ? 1 : hasLeft && event.translationX < -threshold ? -1 : 0;
       if (direction !== crossedDirection.value) {
         crossedDirection.value = direction;
         if (direction !== 0) runOnJS(thresholdHaptic)(direction);
@@ -140,7 +148,7 @@ export function SwipeableRow({
     })
     .onEnd(() => {
       const threshold = screenWidth * THRESHOLD_FRACTION;
-      if (Math.abs(translateX.value) > threshold) {
+      if (Math.abs(translateX.value) > threshold && (hasLeft || translateX.value > 0)) {
         const direction = translateX.value > 0 ? 1 : -1;
         translateX.value = withTiming(
           direction * screenWidth,
@@ -187,12 +195,14 @@ export function SwipeableRow({
             <IconSymbol name={rightAction.icon} size={22} color={colors.textOnAccent} />
           </Animated.View>
         </Animated.View>
-        <Animated.View
-          style={[styles.trail, { backgroundColor: leftAction.color, borderRadius: radius.card }, leftTrailStyle]}>
-          <Animated.View style={[styles.trailIconRight, leftIconStyle]}>
-            <IconSymbol name={leftAction.icon} size={22} color={colors.textOnAccent} />
+        {leftAction && (
+          <Animated.View
+            style={[styles.trail, { backgroundColor: leftAction.color, borderRadius: radius.card }, leftTrailStyle]}>
+            <Animated.View style={[styles.trailIconRight, leftIconStyle]}>
+              <IconSymbol name={leftAction.icon} size={22} color={colors.textOnAccent} />
+            </Animated.View>
           </Animated.View>
-        </Animated.View>
+        )}
         <Animated.View style={contentStyle}>{children}</Animated.View>
       </View>
     </GestureDetector>

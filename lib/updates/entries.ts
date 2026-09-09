@@ -24,6 +24,8 @@ export const UPDATE_ENTRIES: UpdateEntry[] = [
       'A task with only a lifestyle now wears the full solid color on its badge, so lifestyles always read solid and subjects always read soft.',
       'Notes on a task now show quietly on the right side of the card, so you can read them without opening the task.',
       'Pressing enter in the notes field or a name field now just puts the keyboard away instead of doing anything surprising.',
+      'Daily tasks are called recurring tasks now, which is what they always were.',
+      'Removing a recurring task is deliberate now. On the phone hold the row and confirm, on the computer right click it. The left swipe no longer deletes, so a nudge can never throw one away.',
     ],
   },
   {
