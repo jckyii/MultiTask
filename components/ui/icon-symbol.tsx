@@ -44,6 +44,10 @@ const MAPPING = {
   // Week-list toggle: stacked agenda rows (list.bullet read as "notepad" —
   // developer feedback 2026-08-02).
   'calendar.day.timeline.left': 'view-agenda',
+  // The week button (2026-09-09): same stacked-blocks glyph everywhere —
+  // the SF name is chosen to LOOK like Material's view-agenda, per the
+  // developer's "match the web version".
+  'rectangle.grid.1x2': 'view-agenda',
 } as IconMapping;
 
 /**

@@ -23,7 +23,6 @@ import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { TabPage } from '@/components/tab-pager';
 import { WeekGrid } from '@/components/week-grid';
-import { useCollapsedSection } from '@/hooks/use-collapsed-section';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { TourAnchor, useTourAnchor } from '@/components/tour/tour-context';
 import { usePageSlide } from '@/hooks/use-page-slide';
@@ -100,9 +99,11 @@ export default function CalendarScreen() {
   const todayKey = localDateKey(today);
   // Grid ⇄ week-list toggle (developer request 2026-08-02).
   const [weekView, setWeekView] = useState(false);
-  // Week FORMAT (developer spec 2026-08-18): scroll list (the original) or
-  // the Google-Calendar-style time grid. Persisted; true = list (default).
-  const [weekListFormat, toggleWeekFormat] = useCollapsedSection('ui.weekListFormat');
+  // Week FORMAT (developer spec 2026-09-09): entering week view ALWAYS lands
+  // on the BLOCK grid first, and tapping the week button again flips
+  // blocks ⇄ list — the separate format button (and its persisted pick,
+  // 2026-08-18) is gone; a calendar icon beside it exits to the month.
+  const [weekFormat, setWeekFormat] = useState<'blocks' | 'list'>('blocks');
   const [weekOffset, setWeekOffset] = useState(0);
   // Tapping the week range opens a jump-to-week picker (developer request
   // 2026-08-02). It opens SCROLLED TO the week you're viewing — not the top
@@ -567,34 +568,38 @@ export default function CalendarScreen() {
               imports" step rings both). */}
           <TourAnchor id="calendar-tools">
             <View style={styles.topBarActions}>
-              {/* Week view ⇄ month (developer request 2026-08-02). */}
+              {/* The week button (developer spec 2026-09-09): first tap
+                  opens the week BLOCKS, each further tap flips
+                  blocks ⇄ list. It keeps its icon while active — the
+                  calendar icon beside it is the way back to the month. */}
               <Pressable
-                onPress={() => setWeekView((w) => !w)}
+                onPress={() => {
+                  if (!weekView) {
+                    setWeekView(true);
+                    setWeekFormat('blocks');
+                  } else {
+                    setWeekFormat((f) => (f === 'blocks' ? 'list' : 'blocks'));
+                  }
+                }}
                 hitSlop={10}
                 accessibilityRole="button"
                 accessibilityState={{ selected: weekView }}
-                accessibilityLabel={weekView ? 'Show month grid' : 'Show week view'}>
-                <IconSymbol
-                  name={weekView ? 'calendar' : 'calendar.day.timeline.left'}
-                  size={24}
-                  color={colors.accent}
-                />
+                accessibilityLabel={
+                  !weekView
+                    ? 'Show week view'
+                    : weekFormat === 'blocks'
+                      ? 'Show the week as a list'
+                      : 'Show the week as blocks'
+                }>
+                <IconSymbol name="rectangle.grid.1x2" size={24} color={colors.accent} />
               </Pressable>
-              {/* Week FORMAT toggle — only while week view is active
-                  (developer spec 2026-08-18). */}
               {weekView && (
                 <Pressable
-                  onPress={toggleWeekFormat}
+                  onPress={() => setWeekView(false)}
                   hitSlop={10}
                   accessibilityRole="button"
-                  accessibilityLabel={
-                    weekListFormat ? 'Show the week as a time grid' : 'Show the week as a list'
-                  }>
-                  <IconSymbol
-                    name={weekListFormat ? 'square.grid.2x2' : 'list.bullet'}
-                    size={24}
-                    color={colors.accent}
-                  />
+                  accessibilityLabel="Show month grid">
+                  <IconSymbol name="calendar" size={24} color={colors.accent} />
                 </Pressable>
               )}
               <Pressable
@@ -714,10 +719,10 @@ export default function CalendarScreen() {
         </View>
     );
 
-    // The GRID format (developer spec 2026-08-18): Google-Calendar-style 7
-    // columns over a shared time axis. It scrolls itself, so it lives
-    // OUTSIDE any ScrollView; the swipe pager wraps both formats.
-    if (!weekListFormat) {
+    // The BLOCK format (the first view since 2026-09-09): Google-Calendar
+    // style 7 columns over a shared time axis. It scrolls itself, so it
+    // lives OUTSIDE any ScrollView; the swipe pager wraps both formats.
+    if (weekFormat === 'blocks') {
       return (
         <GestureDetector gesture={weekSwipe}>
         <Animated.View nativeID="week-pager" style={[styles.zoomContainer, weekPager.style]}>
