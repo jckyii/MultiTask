@@ -30,6 +30,8 @@ const TAB_PATHS = ['/', '/daily', '/calendar', '/settings'];
 function hostForPath(pathname: string): TourHost {
   if (pathname === '/quick-add') return 'quick-add';
   if (pathname.startsWith('/day')) return 'day';
+  if (pathname === '/import-events') return 'import';
+  if (pathname === '/import-help') return 'import-help';
   return 'tabs';
 }
 
@@ -99,6 +101,20 @@ export function TourOverlay({ host = 'tabs' }: { host?: TourHost }) {
     if (step.advanceOnPath && pathname === step.advanceOnPath) goTo(index + 1);
     else if (step.advanceOnPathPrefix && pathname.startsWith(step.advanceOnPathPrefix)) goTo(index + 1);
   }, [active, step, host, pathname, index, goTo]);
+
+  // The import sheets end with a hop to Settings: when the tour has moved
+  // on to a tabs step while one of these sheets is still open, the sheet's
+  // own instance navigates the stack back out (the tabs instance can't —
+  // it only navigates from tab paths). Scoped to the import hosts so the
+  // quick-add close flow (the form pops itself) is never raced.
+  useEffect(() => {
+    if (!active || !step || step.host !== 'tabs') return;
+    if (host !== 'import' && host !== 'import-help') return;
+    if (hostForPath(pathname) !== host) return;
+    const timer = setTimeout(() => router.navigate(step.tab ?? '/'), 250);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, index, pathname]);
 
   // Recovery: the user bailed out of the surface a step lives on (closed
   // the sheet mid-form, left the day page early). The tabs instance walks
@@ -223,16 +239,21 @@ export function TourOverlay({ host = 'tabs' }: { host?: TourHost }) {
     </View>
   );
 
+  // Clamp the ring to the window: an anchor flush with a screen edge used
+  // to push the ring's border off-screen (developer report 2026-09-09, the
+  // year button).
+  const ringLeft = rect ? Math.max(2, rect.x - PAD) : 0;
+  const ringTop = rect ? Math.max(2, rect.y - PAD) : 0;
   const ring = rect && !selfRing ? (
     <View
       pointerEvents="none"
       style={[
         styles.ring,
         {
-          left: rect.x - PAD,
-          top: rect.y - PAD,
-          width: rect.width + PAD * 2,
-          height: rect.height + PAD * 2,
+          left: ringLeft,
+          top: ringTop,
+          width: Math.min(windowWidth - 2, rect.x + rect.width + PAD) - ringLeft,
+          height: Math.min(windowHeight - 2, rect.y + rect.height + PAD) - ringTop,
           borderColor: colors.accent,
           borderRadius: radius.card,
         },
@@ -287,6 +308,18 @@ export function TourOverlay({ host = 'tabs' }: { host?: TourHost }) {
     return (
       <View style={[StyleSheet.absoluteFill, styles.overlayRoot]} pointerEvents="box-none">
         {step.dim ? panes(DIM_ACTION, false) : null}
+        {ring}
+        {holder}
+      </View>
+    );
+  }
+
+  // noDim spotlights (developer 2026-09-09): the page stays fully visible
+  // and interactive behind the card — just the ring (when anchored) and
+  // the card itself.
+  if (step.noDim) {
+    return (
+      <View style={[StyleSheet.absoluteFill, styles.overlayRoot]} pointerEvents="box-none">
         {ring}
         {holder}
       </View>

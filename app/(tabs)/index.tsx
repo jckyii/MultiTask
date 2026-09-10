@@ -32,7 +32,7 @@ import { animateListChanges } from '@/lib/animate-layout';
 import { isReduceMotionEnabled } from '@/lib/reduced-motion';
 import { confirmDialog } from '@/lib/confirm';
 import { clearEnterMark, getEnterFrom, markEnter } from '@/lib/enter-marks';
-import { getTourTaskId } from '@/lib/tour/events';
+import { emitTourEvent, getTourTaskId } from '@/lib/tour/events';
 import { EMPTY_FILTERS, filterTasks, hasActiveFilters, type TaskFilters } from '@/lib/tasks/filter';
 import { groupTasks } from '@/lib/tasks/sections';
 import { pageContent } from '@/lib/theme/layout';
@@ -207,6 +207,7 @@ export default function TaskListScreen() {
   function clearAllCompleted() {
     const ids = (tasks ?? []).filter((t) => t.isCompleted && !t.deletedAt).map((t) => t.id);
     if (ids.length === 0) return;
+    emitTourEvent('tasks-cleared');
     runWithCascade(ids, !completedCollapsed, () => {
       animateListChanges();
       ids.forEach((id) => markEnter(id, 'left'));
@@ -238,6 +239,7 @@ export default function TaskListScreen() {
       destructive: true,
     });
     if (!confirmed) return;
+    emitTourEvent('trash-emptied');
     runWithCascade(ids, !deletedCollapsed, () => {
       animateListChanges();
       // Success-gated toast: this is the one action with no undo, so
@@ -280,6 +282,7 @@ export default function TaskListScreen() {
           // Pressable + hitSlop: a caption-size Text alone is a ~24pt target
           // for a batch action (HIG minimum is 44). "Empty trash" is the ONE
           // irreversible list action — red, unlike the undoable "Clear all".
+          <TourAnchor ringPadX={6} ringPadY={4} id={isCompleted ? 'clear-all' : 'empty-trash'}>
           <Pressable
             onPress={isCompleted ? clearAllCompleted : emptyTrash}
             hitSlop={12}
@@ -293,6 +296,7 @@ export default function TaskListScreen() {
               {isCompleted ? 'Clear all' : 'Empty trash'}
             </Text>
           </Pressable>
+          </TourAnchor>
         )}
       </View>
     );

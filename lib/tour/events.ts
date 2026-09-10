@@ -7,15 +7,24 @@ export type TourEvent =
   | 'task-uncompleted'
   | 'task-deleted'
   | 'task-restored'
+  | 'form-title-committed'
   | 'form-date-set'
   | 'form-priority-set'
   | 'form-category-set'
   | 'form-subject-set'
+  | 'form-subject-cleared'
+  | 'form-notes-committed'
+  | 'tasks-cleared'
+  | 'trash-emptied'
   | 'recurring-added'
   | 'recurring-checked'
+  | 'recurring-removed'
   | 'form-details-open'
   | 'calendar-year-open'
-  | 'calendar-month-open';
+  | 'calendar-month-open'
+  | 'calendar-week-open'
+  | 'calendar-week-list'
+  | 'calendar-week-closed';
 
 type Listener = (event: TourEvent) => void;
 

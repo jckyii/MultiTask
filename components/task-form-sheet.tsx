@@ -503,6 +503,15 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
       return;
     }
     if (category?.name === g.name) {
+      if (subject) {
+        // A subject is picked (e.g. just created, box left open): the
+        // lifestyle tap simply CLOSES the box and keeps the pick —
+        // deselecting goes through the subject chip or another lifestyle.
+        setHoverLifestyle(null);
+        setCreating(null);
+        setEditingLifestyle(null);
+        return;
+      }
       // Re-opened the selected lifestyle and tapped it again: deselect.
       setCategory(null);
       setSubject(null);
@@ -523,8 +532,12 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
   function onSubjectTap(g: { name: string; color: string }, s: NamedColor) {
     animateListChanges();
     if (subject?.name === s.name) {
-      // Tapping the selected subject unselects it (stay hovered).
+      // Tapping the selected subject drops the whole pick back to preview
+      // (developer 2026-09-09: after unselecting the subject, one more tap
+      // on the lifestyle is what confirms a lifestyle-only choice).
       setSubject(null);
+      setCategory(null);
+      emitTourEvent('form-subject-cleared');
       return;
     }
     setCategory({ name: g.name, color: g.color });
@@ -532,6 +545,18 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     setHoverLifestyle(null);
     setCreating(null);
     setEditingLifestyle(null);
+    emitTourEvent('form-category-set');
+    emitTourEvent('form-subject-set');
+  }
+
+  // Creating a subject through the +new creator selects it but LEAVES the
+  // box open (like lifestyle creation) — the tour walks straight into
+  // unselecting it, and seeing the chip you just made beats a collapse.
+  function onSubjectCreated(g: { name: string; color: string }, s: NamedColor) {
+    animateListChanges();
+    setCategory({ name: g.name, color: g.color });
+    setSubject(s);
+    setCreating(null);
     emitTourEvent('form-category-set');
     emitTourEvent('form-subject-set');
   }
@@ -744,6 +769,9 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
           scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
+          {/* The Name tour step rings the title with a little breathing
+              room from the field itself (developer 2026-09-09). */}
+          <TourAnchor ringPadX={FORM_RING_X} ringPadY={6} id="form-title">
           <TextInput
             style={[
               styles.titleInput,
@@ -762,11 +790,15 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
             ref={titleInputRef}
             // Done only dismisses the keyboard; submitting is the button's job.
             returnKeyType="done"
+            onSubmitEditing={() => emitTourEvent('form-title-committed')}
           />
+          </TourAnchor>
 
           {/* marginTop lives on the ANCHOR so the tour ring hugs the chips
               (inside, the margin read as dead space above them). */}
-          <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-when" style={{ marginTop: space.s3 }}>
+          {/* ringPadY raised: the ring used to touch the chips top and
+              bottom (developer 2026-09-09). */}
+          <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y + 5} id="form-when" style={{ marginTop: space.s3 }}>
           <View style={[styles.chipRow, { gap: space.s2 }]}>
             {dueDate ? (
               <>
@@ -788,6 +820,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                     {dueDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
                   </Text>
                 </Pressable>
+                <TourAnchor ringPadX={4} ringPadY={4} id="form-clear-date">
                 <Pressable
                   onPress={() => {
                     setPicker(null);
@@ -798,6 +831,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                   style={chipStyle}>
                   <Text style={{ fontSize: 13, color: colors.textTertiary }}>✕</Text>
                 </Pressable>
+                </TourAnchor>
               </>
             ) : (
               <Pressable
@@ -866,28 +900,43 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
 
           <CollapsibleReveal open={detailsOpen}>
             <View style={{ gap: space.s3, paddingTop: space.s2 }}>
-              {/* Labels sit OUTSIDE the tour anchors so the ring can never
-                  strike through them (developer rounds 1-3). */}
-              <View style={{ gap: space.s2 }}>
-              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Priority</Text>
+              {/* Labels sit INSIDE the section anchors since the v6 tour
+                  (developer 2026-09-09: the info steps box the subtitle
+                  too) — the ring surrounds label + chips with FORM_RING
+                  padding, so it no longer strikes through the text the way
+                  the tight rounds 1-3 rings did. */}
               {/* flex-start: the ring shrink-wraps the chips instead of
                   spanning the sheet and kissing its side edges (developer
                   round 4). Creator rows need full width, so category and
                   subject stretch only while their creator is open. */}
               <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-priority" style={{ alignSelf: 'flex-start' }}>
+              <View style={{ gap: space.s2 }}>
+              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Priority</Text>
               <View style={[styles.wrapRow, { gap: space.s2 }]}>
                 <SelectChip label="None" selected={priority == null} onPress={() => setPriorityValue(null)} />
-                {[1, 2, 3].map((tier) => (
-                  <SelectChip
-                    key={tier}
-                    label={priorityTiers[tier].label}
-                    selected={priority === tier}
-                    onPress={() => { setPriorityValue(tier); emitTourEvent('form-priority-set'); }}
-                  />
-                ))}
+                {[1, 2, 3].map((tier) =>
+                  tier === 1 ? (
+                    // Its own anchor: the tour's "select the 1st priority"
+                    // step rings just this chip.
+                    <TourAnchor key={tier} ringPadX={4} ringPadY={4} id="form-priority-first">
+                      <SelectChip
+                        label={priorityTiers[tier].label}
+                        selected={priority === tier}
+                        onPress={() => { setPriorityValue(tier); emitTourEvent('form-priority-set'); }}
+                      />
+                    </TourAnchor>
+                  ) : (
+                    <SelectChip
+                      key={tier}
+                      label={priorityTiers[tier].label}
+                      selected={priority === tier}
+                      onPress={() => { setPriorityValue(tier); emitTourEvent('form-priority-set'); }}
+                    />
+                  )
+                )}
+              </View>
               </View>
               </TourAnchor>
-              </View>
 
               {/* THE LIFESTYLE SELECTOR v2 (developer spec 2026-09-09).
                   Tap once = HOVER: the box opens and previews its subjects
@@ -899,9 +948,9 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                   selected lifestyle and tapping it again clears the
                   selection. Tapping the selected subject unselects just the
                   subject. The pencil edits a lifestyle's name and color. */}
+              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-lifestyle">
               <View style={{ gap: space.s2 }}>
               <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Lifestyle</Text>
-              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-lifestyle">
               <View style={{ gap: space.s2 }}>
                 {category && hoverLifestyle === null ? (
                   // STACKED summary: the chosen subject (or lifestyle) with
@@ -1023,6 +1072,14 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                                 />
                               ) : (
                                 <>
+                                  {/* The tour's Subjects step rings this
+                                      whole row, and its create step rings
+                                      just the +new chip. Every box stays
+                                      mounted inside CollapsibleReveal, so
+                                      only the OPEN box may own the real
+                                      anchor ids — closed boxes register
+                                      throwaway ids nothing targets. */}
+                                  <TourAnchor ringPadX={4} ringPadY={4} id={open ? 'form-subjects' : `off-subjects-${g.name}`}>
                                   <View style={[styles.wrapRow, { gap: space.s2 }]}>
                                     {g.subjects.map((s) => (
                                       <SelectChip
@@ -1035,12 +1092,15 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                                         deleteLabel={`Delete subject “${s.name}”`}
                                       />
                                     ))}
+                                    <TourAnchor ringPadX={4} ringPadY={4} id={open ? 'form-subject-new' : `off-subject-new-${g.name}`}>
                                     <SelectChip
                                       label="＋new"
                                       selected={creating === 'subject'}
                                       onPress={() => setCreating(creating === 'subject' ? null : 'subject')}
                                     />
+                                    </TourAnchor>
                                   </View>
+                                  </TourAnchor>
                                   {creating === 'subject' && (
                                     <NewOptionCreator
                                       placeholder="New subject name"
@@ -1052,7 +1112,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                                           next.set(g.name, [...(next.get(g.name) ?? []), option]);
                                           return next;
                                         });
-                                        onSubjectTap(g, option);
+                                        onSubjectCreated(g, option);
                                       }}
                                     />
                                   )}
@@ -1064,11 +1124,13 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                         </RightClickMenu>
                       );
                     })}
+                    <TourAnchor ringPadX={4} ringPadY={4} id="form-lifestyle-new" style={{ alignSelf: 'flex-start' }}>
                     <SelectChip
                       label="＋ New"
                       selected={creating === 'lifestyle'}
                       onPress={() => setCreating(creating === 'lifestyle' ? null : 'lifestyle')}
                     />
+                    </TourAnchor>
                     {creating === 'lifestyle' && (
                       <NewOptionCreator
                         placeholder="New lifestyle name"
@@ -1090,12 +1152,13 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                   </View>
                 )}
               </View>
-              </TourAnchor>
               </View>
+              </TourAnchor>
 
+              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-notes">
               <View style={{ gap: space.s2 }}>
               <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Description</Text>
-              <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-notes">
+              <TourAnchor ringPadX={4} ringPadY={4} id="form-notes-input">
               <TextInput
                 style={[
                   styles.descriptionInput,
@@ -1114,10 +1177,14 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                 multiline
                 returnKeyType="done"
                 blurOnSubmit
-                onSubmitEditing={() => Keyboard.dismiss()}
+                onSubmitEditing={() => {
+                  Keyboard.dismiss();
+                  emitTourEvent('form-notes-committed');
+                }}
               />
               </TourAnchor>
               </View>
+              </TourAnchor>
             </View>
           </CollapsibleReveal>
         </ScrollView>

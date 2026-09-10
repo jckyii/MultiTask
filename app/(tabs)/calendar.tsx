@@ -485,7 +485,7 @@ export default function CalendarScreen() {
           {MONTH_NAMES.map((name, m) => {
             const isCurrent = isCurrentYear && m === now.getMonth();
             const count = monthTaskCount(year, m);
-            return (
+            const block = (
               <Pressable
                 key={name}
                 onPress={(event) => {
@@ -503,6 +503,9 @@ export default function CalendarScreen() {
                 accessibilityLabel={`${name} ${year}, ${count} tasks`}
                 style={[
                   styles.monthBlock,
+                  // Inside the tour anchor the WRAPPER owns the grid cell
+                  // sizing, so the block itself just fills it.
+                  isCurrent && { width: '100%', flexGrow: 0 },
                   {
                     height: yearBlockHeight,
                     backgroundColor: colors.surfaceElevated,
@@ -522,6 +525,15 @@ export default function CalendarScreen() {
                   {count === 0 ? '—' : `${count} task${count === 1 ? '' : 's'}`}
                 </Text>
               </Pressable>
+            );
+            // The v6 tour's zoom-back-in step rings the CURRENT month block
+            // (the wrapper takes over the grid cell sizing).
+            return isCurrent ? (
+              <TourAnchor key={name} ringPadX={3} ringPadY={3} id="year-current-month" style={styles.monthBlock}>
+                {block}
+              </TourAnchor>
+            ) : (
+              block
             );
           })}
         </View>
@@ -564,44 +576,55 @@ export default function CalendarScreen() {
           <Text style={[type.body, { color: colors.textSecondary }]}>Years</Text>
         )}
         <View style={styles.topBarActions}>
-          {/* Week toggle + import share one tour anchor ("Week list and
-              imports" step rings both). */}
-          <TourAnchor id="calendar-tools">
+          {/* The week button (developer spec 2026-09-09): first tap opens
+              the week BLOCKS, each further tap flips blocks ⇄ list. It
+              keeps its icon while active — the calendar icon beside it is
+              the way back to the month. Each button carries its own tour
+              anchor (the v6 tour walks them one by one). */}
+          <TourAnchor ringPadX={4} ringPadY={4} id="week-button">
+          <Pressable
+            onPress={() => {
+              if (!weekView) {
+                setWeekView(true);
+                setWeekFormat('blocks');
+                emitTourEvent('calendar-week-open');
+              } else {
+                // Emit OUTSIDE the state updater — emits inside updaters
+                // get dropped by React (the details-open lesson).
+                const next = weekFormat === 'blocks' ? 'list' : 'blocks';
+                setWeekFormat(next);
+                emitTourEvent(next === 'list' ? 'calendar-week-list' : 'calendar-week-open');
+              }
+            }}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityState={{ selected: weekView }}
+            accessibilityLabel={
+              !weekView
+                ? 'Show week view'
+                : weekFormat === 'blocks'
+                  ? 'Show the week as a list'
+                  : 'Show the week as blocks'
+            }>
+            <IconSymbol name="rectangle.grid.1x2" size={24} color={colors.accent} />
+          </Pressable>
+          </TourAnchor>
+          {weekView && (
+            <TourAnchor ringPadX={4} ringPadY={4} id="month-button">
+            <Pressable
+              onPress={() => {
+                setWeekView(false);
+                emitTourEvent('calendar-week-closed');
+              }}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Show month grid">
+              <IconSymbol name="calendar" size={24} color={colors.accent} />
+            </Pressable>
+            </TourAnchor>
+          )}
+          <TourAnchor ringPadX={4} ringPadY={4} id="event-buttons">
             <View style={styles.topBarActions}>
-              {/* The week button (developer spec 2026-09-09): first tap
-                  opens the week BLOCKS, each further tap flips
-                  blocks ⇄ list. It keeps its icon while active — the
-                  calendar icon beside it is the way back to the month. */}
-              <Pressable
-                onPress={() => {
-                  if (!weekView) {
-                    setWeekView(true);
-                    setWeekFormat('blocks');
-                  } else {
-                    setWeekFormat((f) => (f === 'blocks' ? 'list' : 'blocks'));
-                  }
-                }}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityState={{ selected: weekView }}
-                accessibilityLabel={
-                  !weekView
-                    ? 'Show week view'
-                    : weekFormat === 'blocks'
-                      ? 'Show the week as a list'
-                      : 'Show the week as blocks'
-                }>
-                <IconSymbol name="rectangle.grid.1x2" size={24} color={colors.accent} />
-              </Pressable>
-              {weekView && (
-                <Pressable
-                  onPress={() => setWeekView(false)}
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel="Show month grid">
-                  <IconSymbol name="calendar" size={24} color={colors.accent} />
-                </Pressable>
-              )}
               <Pressable
                 onPress={() => router.push('/add-event')}
                 hitSlop={10}
@@ -609,6 +632,7 @@ export default function CalendarScreen() {
                 accessibilityLabel="Add an event">
                 <IconSymbol name="plus" size={24} color={colors.accent} />
               </Pressable>
+              <TourAnchor ringPadX={4} ringPadY={4} id="import-button">
               <Pressable
                 onPress={() => router.push('/import-events')}
                 hitSlop={10}
@@ -616,6 +640,7 @@ export default function CalendarScreen() {
                 accessibilityLabel="Import calendar events">
                 <IconSymbol name="tray.and.arrow.down" size={24} color={colors.accent} />
               </Pressable>
+              </TourAnchor>
             </View>
           </TourAnchor>
           <ThemeToggleButton />

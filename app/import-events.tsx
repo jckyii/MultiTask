@@ -11,6 +11,8 @@ import { readAsStringAsync } from 'expo-file-system/legacy';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { TourAnchor } from '@/components/tour/tour-context';
+import { TourOverlay } from '@/components/tour/tour-overlay';
 import { useUndoToast } from '@/components/undo-toast';
 import { confirmDialog } from '@/lib/confirm';
 import { csvToEvents, NAMED_EVENT_COLORS, type CsvImportResult } from '@/lib/events/csv';
@@ -250,12 +252,14 @@ export default function ImportEventsScreen() {
           A CSV with columns like title, date, start time, end time, location, color. Rows without a
           time become all-day events. You can bring rows in as events or turn them into tasks.
         </Text>
+        <TourAnchor ringPadX={4} ringPadY={2} id="import-help-link" style={{ alignSelf: 'flex-start' }}>
         <Pressable
           onPress={() => router.push('/import-help')}
           accessibilityRole="button"
           style={{ paddingVertical: space.s1 }}>
           <Text style={[type.body, { color: colors.accent }]}>How do I make a CSV? (with an AI prompt)</Text>
         </Pressable>
+        </TourAnchor>
 
         <Text style={[type.caption, { color: colors.textSecondary }]}>Event color</Text>
         <View style={[styles.swatchRow, { gap: space.s2 }]}>
@@ -473,6 +477,9 @@ export default function ImportEventsScreen() {
           </Pressable>
         )}
       </Animated.View>
+      {/* Native modal screens paint above the root overlay — the tour's
+          import steps render from INSIDE this route. */}
+      <TourOverlay host="import" />
     </View>
   );
 }

@@ -8,6 +8,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { TourOverlay } from '@/components/tour/tour-overlay';
 import { useUndoToast } from '@/components/undo-toast';
 import { useWideNative } from '@/hooks/use-wide-layout';
 import { tabletSheet } from '@/lib/theme/layout';
@@ -138,6 +139,9 @@ export default function ImportHelpScreen() {
           </Pressable>
         </ScrollView>
       </Animated.View>
+      {/* The tour's AI-prompt steps render from inside this route (native
+          modals paint above the root overlay). */}
+      <TourOverlay host="import-help" />
     </View>
   );
 }

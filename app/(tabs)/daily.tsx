@@ -22,7 +22,7 @@ import { RightClickMenu } from '@/components/right-click-menu';
 import { TabPage } from '@/components/tab-pager';
 import { SwipeableRow } from '@/components/swipeable-row';
 import { TourAnchor } from '@/components/tour/tour-context';
-import { getTourRecurringId } from '@/lib/tour/events';
+import { emitTourEvent, getTourRecurringId } from '@/lib/tour/events';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { SwipeableTaskCard } from '@/components/swipeable-task-card';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -123,6 +123,7 @@ export default function DailyScreen() {
 
   function removeRecurring(task: RecurringTask) {
     animateListChanges();
+    emitTourEvent('recurring-removed');
     archiveRecurring.mutate(task.id, {
       onError: () => toast.show({ message: 'Couldn’t remove — check your connection.' }),
     });

@@ -30,6 +30,7 @@ export const UPDATE_ENTRIES: UpdateEntry[] = [
       'The week button now opens the block view first, showing all seven days on the phone just like the computer. Tap it again for the list view, and use the calendar icon beside it to return to the month. The phone icon matches the web one now.',
       'The Daily page reads top to bottom now: recurring tasks, then today’s tasks as slim one line bars with the title, time and badges, then your schedule. Tap a bar to open the full task. On the computer the schedule sits on the left and your tasks on the right, so cards swipe cleanly off the screen.',
       'There is a feedback form in Settings under Help now. Concerns, improvements and ideas all welcome, they shape what gets built next.',
+      'The tour got a full rewrite, now 54 small steps. It explains each part before asking you to try it, walks the whole lifestyle flow including creating, unselecting and reconfirming, covers Clear all and Empty trash, the recurring task rhythm, the week views, and importing events with the AI prompt, and most pages now stay fully visible instead of being greyed out.',
     ],
   },
   {
