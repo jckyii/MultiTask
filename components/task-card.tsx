@@ -143,13 +143,13 @@ export function TaskCard({ task, onToggleComplete, onDelete, onPress, onLongPres
         </View>
       ) : (
       <>
-      {/* Notes live on the card's empty right side (developer 2026-09-09):
-          quiet caption text that informs without competing — never bold,
-          never colored, clipped before it can crowd the title column. */}
+      {/* Notes live on the card's right 40% (developer 2026-09-10): quiet
+          caption text that informs without competing — never bold, never
+          colored. The column starts at the TOP and runs down until it hits
+          the card's bottom edge, where it clips. */}
       {task.description.length > 0 && (
         <View pointerEvents="none" style={styles.notesColumn}>
           <Text
-            numberOfLines={3}
             maxFontSizeMultiplier={1.2}
             style={[type.caption, { color: colors.textTertiary, fontWeight: '400', textAlign: 'right' }]}>
             {task.description}
@@ -165,7 +165,7 @@ export function TaskCard({ task, onToggleComplete, onDelete, onPress, onLongPres
           styles.content,
           {
             opacity: task.isCompleted || task.deletedAt ? 0.55 : 1,
-            paddingRight: task.description.length > 0 ? '38%' : 0,
+            paddingRight: task.description.length > 0 ? '42%' : 0,
           },
         ]}>
         <Text
@@ -266,8 +266,9 @@ const styles = StyleSheet.create({
     right: 12,
     top: 12,
     bottom: 12,
-    width: '36%',
-    justifyContent: 'center',
+    width: '40%',
+    justifyContent: 'flex-start',
+    overflow: 'hidden', // long notes stop at the card's bottom edge
   },
   titleCompleted: {
     textDecorationLine: 'line-through',

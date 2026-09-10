@@ -15,6 +15,14 @@ export type UpdateEntry = {
 
 export const UPDATE_ENTRIES: UpdateEntry[] = [
   {
+    date: 'September 10, 2026',
+    title: 'Cards read cleaner',
+    points: [
+      'Notes on tasks and events now fill the right side of the card from the top down, taking up to forty percent of the width, and long notes stop at the card edge.',
+      'An event’s location now sits at the bottom left of its card where it is easy to spot, and event notes moved to the right side just like task notes.',
+    ],
+  },
+  {
     date: 'September 9, 2026',
     title: 'Picking a lifestyle feels right now',
     points: [
