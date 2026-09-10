@@ -28,6 +28,7 @@ export const UPDATE_ENTRIES: UpdateEntry[] = [
       'Removing a recurring task is deliberate now. On the phone hold the row and confirm, on the computer right click it. The left swipe no longer deletes, so a nudge can never throw one away.',
       'The day view shows all 24 hours at true scale now, with every hour line drawn even where nothing sits. It opens at your first item of the day, and dragging down only closes the page when you started the drag from the very top.',
       'The week button now opens the block view first, showing all seven days on the phone just like the computer. Tap it again for the list view, and use the calendar icon beside it to return to the month. The phone icon matches the web one now.',
+      'The Daily page reads top to bottom now: recurring tasks, then today’s tasks as slim one line bars with the title, time and badges, then your schedule. Tap a bar to open the full task. On the computer the schedule sits on the left and your tasks on the right, so cards swipe cleanly off the screen.',
     ],
   },
   {

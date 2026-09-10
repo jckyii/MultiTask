@@ -29,6 +29,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useUndoToast } from '@/components/undo-toast';
 import { useTaskActions } from '@/hooks/use-task-actions';
 import { useToday } from '@/hooks/use-today';
+import { useWideLayout } from '@/hooks/use-wide-layout';
 import { animateListChanges } from '@/lib/animate-layout';
 import { confirmDialog } from '@/lib/confirm';
 import { clearEnterMark, getEnterFrom, markEnter } from '@/lib/enter-marks';
@@ -65,6 +66,7 @@ export default function DailyScreen() {
   // split, which all read it below.
   const today = useToday();
   const { handleSwipeRight, handleSwipeLeft } = useTaskActions();
+  const isWide = useWideLayout();
 
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -227,22 +229,12 @@ export default function DailyScreen() {
     );
   }
 
-  return (
-    <TabPage>
-    <View style={[styles.screen, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
-      <ScrollView
-        refreshControl={<RefreshControl refreshing={pullRefreshing} onRefresh={onPullRefresh} />}
-        contentContainerStyle={[pageContent, { paddingHorizontal: space.s4, paddingBottom: insets.bottom + space.s6 }]}>
-        <View style={styles.titleRow}>
-          <TourAnchor id="daily-header">
-          <Text style={[type.h1, { color: colors.textPrimary, paddingTop: space.s3 }]}>Daily</Text>
-          </TourAnchor>
-          <ThemeToggleButton />
-        </View>
-        <Text style={[type.body, { color: colors.textSecondary, marginBottom: space.s4 }]}>
-          {today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-        </Text>
-
+  // The page's three streams, composed per layout (developer 2026-09-09):
+  // phone = Recurring, then today's tasks as compact bars, then the
+  // Schedule; desktop = the Schedule alone on the LEFT and
+  // Recurring + tasks on the RIGHT, so rows swipe cleanly off the screen.
+  const recurringSection = (
+    <>
         {/* ------------------------- Recurring ------------------------- */}
         <Text style={[type.h2, { color: colors.textSecondary, marginBottom: space.s2 }]}>Recurring</Text>
 
@@ -331,33 +323,25 @@ export default function DailyScreen() {
           </View>
           </TourAnchor>
         )}
+    </>
+  );
 
-        {/* ------------------------- Schedule -------------------------- */}
-        {todaysEvents.length > 0 && (
-          <>
-            <Text style={[type.h2, { color: colors.textSecondary, marginTop: space.s6, marginBottom: space.s2 }]}>
-              Schedule
-            </Text>
-            <View style={{ gap: space.s2 }}>
-              {todaysEvents.map((event) => (
-                <EventCard key={event.id} event={event} onPress={(e) => router.push(`/event/${e.id}`)} />
-              ))}
-            </View>
-          </>
-        )}
-
-        {/* ------------------------- Due today ------------------------- */}
+  // Today's tasks as compact one-line bars (title, date and time, badges) —
+  // tap one for the full task, swipes still complete and delete.
+  const dueTodaySection = (
+    <>
         <Text style={[type.h2, { color: colors.textSecondary, marginTop: space.s6, marginBottom: space.s2 }]}>
           Due today
         </Text>
         {dueToday.length === 0 ? (
           <Text style={[type.body, { color: colors.textSecondary }]}>Nothing due today.</Text>
         ) : (
-          <View style={{ gap: space.s3 }}>
+          <View style={{ gap: space.s2 }}>
             {dueToday.map((task) => (
               <SwipeableTaskCard
                 key={task.id}
                 task={task}
+                compact
                 onSwipeRight={handleSwipeRight}
                 onSwipeLeft={handleSwipeLeft}
                 onPress={(t) => router.push(`/task/${t.id}`)}
@@ -366,6 +350,57 @@ export default function DailyScreen() {
               />
             ))}
           </View>
+        )}
+    </>
+  );
+
+  const scheduleSection = todaysEvents.length > 0 && (
+    <>
+            <Text style={[type.h2, { color: colors.textSecondary, marginTop: isWide ? 0 : space.s6, marginBottom: space.s2 }]}>
+              Schedule
+            </Text>
+            <View style={{ gap: space.s2 }}>
+              {todaysEvents.map((event) => (
+                <EventCard key={event.id} event={event} onPress={(e) => router.push(`/event/${e.id}`)} />
+              ))}
+            </View>
+    </>
+  );
+
+  return (
+    <TabPage>
+    <View style={[styles.screen, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
+      <ScrollView
+        refreshControl={<RefreshControl refreshing={pullRefreshing} onRefresh={onPullRefresh} />}
+        contentContainerStyle={[pageContent, { paddingHorizontal: space.s4, paddingBottom: insets.bottom + space.s6 }]}>
+        <View style={styles.titleRow}>
+          <TourAnchor id="daily-header">
+          <Text style={[type.h1, { color: colors.textPrimary, paddingTop: space.s3 }]}>Daily</Text>
+          </TourAnchor>
+          <ThemeToggleButton />
+        </View>
+        <Text style={[type.body, { color: colors.textSecondary, marginBottom: space.s4 }]}>
+          {today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+        </Text>
+
+        {isWide ? (
+          <View style={{ flexDirection: 'row', gap: space.s6, alignItems: 'flex-start' }}>
+            <View style={{ flex: 45 }}>
+              {scheduleSection || (
+                <Text style={[type.body, { color: colors.textSecondary }]}>No events today.</Text>
+              )}
+            </View>
+            <View style={{ flex: 55 }}>
+              {recurringSection}
+              {dueTodaySection}
+            </View>
+          </View>
+        ) : (
+          <>
+            {recurringSection}
+            {dueTodaySection}
+            {scheduleSection}
+          </>
         )}
       </ScrollView>
     </View>

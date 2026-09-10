@@ -19,9 +19,11 @@ type Props = {
   onEntered?: (id: number) => void;
   exit?: { to: 'left' | 'right'; delayMs: number } | null;
   showDescription?: boolean;
+  /** One-line bar variant (see TaskCard.compact). */
+  compact?: boolean;
 };
 
-export function SwipeableTaskCard({ task, onSwipeRight, onSwipeLeft, onPress, enterFrom, onEntered, exit, showDescription }: Props) {
+export function SwipeableTaskCard({ task, onSwipeRight, onSwipeLeft, onPress, enterFrom, onEntered, exit, showDescription, compact }: Props) {
   const { colors } = useTheme();
   const urgencyThresholdHours = useUrgencyThreshold();
 
@@ -60,6 +62,7 @@ export function SwipeableTaskCard({ task, onSwipeRight, onSwipeLeft, onPress, en
         onToggleComplete={onSwipeRight}
         onDelete={onSwipeLeft}
         showDescription={showDescription}
+        compact={compact}
       />
     </SwipeableRow>
   );

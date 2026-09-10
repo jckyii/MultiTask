@@ -24,9 +24,13 @@ type Props = {
   /** No-op since 2026-09-09: notes now always render on the card's right
    *  side, on every surface. Kept so existing call sites don't churn. */
   showDescription?: boolean;
+  /** One-line bar (the Daily view since 2026-09-09): title, due time, and
+   *  badges on a single padded row — tap for the full task. Notes stay off
+   *  the bar entirely. */
+  compact?: boolean;
 };
 
-export function TaskCard({ task, onToggleComplete, onDelete, onPress, onLongPress, showDescription }: Props) {
+export function TaskCard({ task, onToggleComplete, onDelete, onPress, onLongPress, showDescription, compact }: Props) {
   const theme = useTheme();
   const { colors, space, radius, type, monoFont } = theme;
   const urgencyThresholdHours = useUrgencyThreshold();
@@ -77,11 +81,68 @@ export function TaskCard({ task, onToggleComplete, onDelete, onPress, onLongPres
           backgroundColor: background,
           borderColor: colors.borderSubtle,
           borderRadius: radius.card,
-          padding: space.s4,
         },
+        compact
+          ? { paddingVertical: space.s2 + 2, paddingHorizontal: space.s4 }
+          : { padding: space.s4 },
       ]}>
       {accentBar && <View style={[styles.accentBar, { backgroundColor: accentBar }]} />}
 
+      {compact ? (
+        // The one-line Daily bar: title first (it may shrink), then the due
+        // date in mono with the same non-color status cues, then badges.
+        <View
+          style={[
+            styles.compactRow,
+            { gap: space.s2, opacity: task.isCompleted || task.deletedAt ? 0.55 : 1 },
+          ]}>
+          <Text
+            numberOfLines={1}
+            style={[
+              type.body,
+              { fontWeight: '600', color: colors.textPrimary, flexShrink: 1 },
+              task.isCompleted && styles.titleCompleted,
+            ]}>
+            {task.title}
+          </Text>
+          {status === 'overdue' && (
+            <IconSymbol name="exclamationmark.triangle.fill" size={11} color={colors.statusOverdueAccent} />
+          )}
+          {status === 'urgent' && (
+            <IconSymbol name="clock.fill" size={11} color={colors.statusUrgentAccent} />
+          )}
+          <Text
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.2}
+            style={{
+              fontFamily: monoFont,
+              fontSize: 11,
+              lineHeight: 15,
+              // The date never yields — the TITLE is the shrinking column,
+              // and a cut-off time reads as the wrong time.
+              flexShrink: 0,
+              color:
+                status === 'overdue'
+                  ? colors.statusOverdueAccent
+                  : status === 'urgent'
+                    ? colors.statusUrgentAccent
+                    : colors.textSecondary,
+            }}>
+            {task.dueDate ? formatDueDateCompact(task.dueDate) : 'No due date'}
+          </Text>
+          <View style={styles.compactSpacer} />
+          {task.priority != null && <PriorityBadge priority={task.priority} />}
+          {task.category && (
+            <LifestylePill
+              lifestyle={task.category}
+              lifestyleColor={task.categoryColor}
+              subject={task.subject.length > 0 ? task.subject : null}
+              subjectColor={task.subjectColor}
+            />
+          )}
+        </View>
+      ) : (
+      <>
       {/* Notes live on the card's empty right side (developer 2026-09-09):
           quiet caption text that informs without competing — never bold,
           never colored, clipped before it can crowd the title column. */}
@@ -149,8 +210,18 @@ export function TaskCard({ task, onToggleComplete, onDelete, onPress, onLongPres
           />
         </View>
       </View>
+      </>
+      )}
     </Pressable>
   );
+}
+
+// Compact bars drop the weekday from the due date — on one shared line the
+// full format left three-word titles truncated to nothing.
+function formatDueDateCompact(due: Date): string {
+  const date = due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const time = due.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return `${date} · ${time}`;
 }
 
 // Status → card surface + accent bar color (the sacred four, plus completed).
@@ -181,6 +252,14 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 4,
+  },
+  compactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 24, // one text line; the card's vertical padding does the rest
+  },
+  compactSpacer: {
+    flexGrow: 1,
   },
   notesColumn: {
     position: 'absolute',
