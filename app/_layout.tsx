@@ -82,6 +82,10 @@ function RootNavigator() {
           options={{ presentation: 'transparentModal', animation: 'none', headerShown: false }}
         />
         <Stack.Screen
+          name="feedback"
+          options={{ presentation: 'transparentModal', animation: 'none', headerShown: false }}
+        />
+        <Stack.Screen
           name="import-help"
           options={{ presentation: 'transparentModal', animation: 'none', headerShown: false }}
         />

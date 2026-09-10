@@ -465,6 +465,7 @@ export default function SettingsScreen() {
         {sectionTitle('Help')}
         {actionRow('Replay the tour', () => tour.start())}
         {actionRow('How to use Multitask', () => router.push('/guide'))}
+        {actionRow('Send feedback', () => router.push('/feedback'))}
         {actionRow('What’s new', () => router.push('/updates'))}
         {actionRow('Support', () => router.push('/support'))}
         {actionRow('Privacy policy', () => router.push('/privacy'))}
