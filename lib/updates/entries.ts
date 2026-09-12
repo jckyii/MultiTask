@@ -15,6 +15,13 @@ export type UpdateEntry = {
 
 export const UPDATE_ENTRIES: UpdateEntry[] = [
   {
+    date: 'September 12, 2026',
+    title: 'Picking lifestyles on the computer',
+    points: [
+      'On the computer, hovering a lifestyle only previews its subjects now, and moving the mouse away never changes your pick. Clicking a lifestyle keeps its menu open until you click another one, and selecting always takes a click, either on a subject or a second click on the lifestyle itself.',
+    ],
+  },
+  {
     date: 'September 10, 2026',
     title: 'Cards read cleaner',
     points: [

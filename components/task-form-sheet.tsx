@@ -291,6 +291,13 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
   // Selection happens by tapping a subject, or tapping the hovered
   // lifestyle itself. On the computer, mouse hover drives this directly.
   const [hoverLifestyle, setHoverLifestyle] = useState<string | null>(null);
+  // Desktop (developer 2026-09-12): mouse hover only PREVIEWS a box — it
+  // must never change the selection, and hovering off to empty space just
+  // closes the preview. A CLICK pins the box open: a pinned box ignores
+  // hover-off and only moves when another lifestyle is clicked. Selecting
+  // therefore always takes a click — the first click pins, the second (or
+  // a subject click) selects. Native taps always pin (the tap IS the click).
+  const [openPinned, setOpenPinned] = useState(false);
   // Lifestyle whose inline name+color editor is open (the pencil button).
   const [editingLifestyle, setEditingLifestyle] = useState<string | null>(null);
   // Options created in this session, so they render immediately (they
@@ -475,7 +482,10 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
         setCategory(null);
         setSubject(null);
       }
-      if (hoverLifestyle === option.name) setHoverLifestyle(null);
+      if (hoverLifestyle === option.name) {
+        setHoverLifestyle(null);
+        setOpenPinned(false);
+      }
       if (editingLifestyle === option.name) setEditingLifestyle(null);
       if (inUse > 0) deleteCategory.mutate(option.name);
     } else {
@@ -495,9 +505,13 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
 
   function onLifestyleTap(g: { name: string; color: string }) {
     animateListChanges();
-    if (hoverLifestyle !== g.name) {
-      // First tap = hover open (preview, not selection).
+    if (hoverLifestyle !== g.name || !openPinned) {
+      // First CLICK on a box — including one the mouse merely previewed —
+      // pins it open without selecting anything (developer 2026-09-12:
+      // selection only ever happens on a click, and the first click is
+      // the open). Clicking another lifestyle moves the pin here.
       setHoverLifestyle(g.name);
+      setOpenPinned(true);
       setCreating(null);
       setEditingLifestyle(null);
       return;
@@ -508,6 +522,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
         // lifestyle tap simply CLOSES the box and keeps the pick —
         // deselecting goes through the subject chip or another lifestyle.
         setHoverLifestyle(null);
+        setOpenPinned(false);
         setCreating(null);
         setEditingLifestyle(null);
         return;
@@ -516,14 +531,16 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
       setCategory(null);
       setSubject(null);
       setHoverLifestyle(null);
+      setOpenPinned(false);
       setCreating(null);
       setEditingLifestyle(null);
       return;
     }
-    // Second tap on the hovered box: confirm lifestyle-only.
+    // Second click on the pinned box: confirm lifestyle-only.
     setCategory({ name: g.name, color: g.color });
     setSubject(null);
     setHoverLifestyle(null);
+    setOpenPinned(false);
     setCreating(null);
     setEditingLifestyle(null);
     emitTourEvent('form-category-set');
@@ -543,6 +560,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     setCategory({ name: g.name, color: g.color });
     setSubject(s);
     setHoverLifestyle(null);
+    setOpenPinned(false);
     setCreating(null);
     setEditingLifestyle(null);
     emitTourEvent('form-category-set');
@@ -576,18 +594,25 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     if (category?.name === from) setCategory(option);
     setEditingLifestyle(null);
     setHoverLifestyle(option.name);
+    setOpenPinned(true);
     toast.show({ message: 'Lifestyle updated.' });
   }
 
-  /** Web only: mouse hover opens a lifestyle's subjects, hover-off closes
-   *  them (raw DOM handlers - RNW Pressable onHoverIn is unreliable with
-   *  nested pressables, the round-4 lesson). Creating/editing pins it open. */
+  /** Web only: mouse hover PREVIEWS a lifestyle's subjects, hover-off
+   *  closes the preview (raw DOM handlers - RNW Pressable onHoverIn is
+   *  unreliable with nested pressables, the round-4 lesson). A pinned box
+   *  (opened by click) ignores hover entirely — it stays until another
+   *  lifestyle is clicked (developer 2026-09-12); creating/editing also
+   *  hold it open. */
   function webHoverProps(name: string) {
     if (!isWeb) return {};
     return {
-      onMouseEnter: () => setHoverLifestyle(name),
+      onMouseEnter: () => {
+        if (openPinned) return;
+        setHoverLifestyle(name);
+      },
       onMouseLeave: () => {
-        if (creating === 'subject' || editingLifestyle) return;
+        if (openPinned || creating === 'subject' || editingLifestyle) return;
         setHoverLifestyle((h) => (h === name ? null : h));
       },
     } as Record<string, unknown>;
@@ -961,6 +986,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                         label: `Edit lifestyle “${category.name}”`,
                         onPress: () => {
                           setHoverLifestyle(category.name);
+                          setOpenPinned(true);
                           setEditingLifestyle(category.name);
                         },
                       },
@@ -972,7 +998,10 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                   <Pressable
                     onPress={() => {
                       animateListChanges();
+                      // A click opened it — pinned, so it shows the full
+                      // menu and survives mouse hover-off.
                       setHoverLifestyle(category.name);
+                      setOpenPinned(true);
                     }}
                     onLongPress={() =>
                       removeOption(subject ? 'subject' : 'lifestyle', subject ?? category)
@@ -1011,6 +1040,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                               label: `Edit lifestyle “${g.name}”`,
                               onPress: () => {
                                 setHoverLifestyle(g.name);
+                                setOpenPinned(true);
                                 setEditingLifestyle(g.name);
                               },
                             },
@@ -1144,6 +1174,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                           // Leave the new lifestyle OPEN so its ＋new subject
                           // chip is right there (the tour walks into it).
                           setHoverLifestyle(option.name);
+                          setOpenPinned(true);
                           setCreating(null);
                           emitTourEvent('form-category-set');
                         }}
