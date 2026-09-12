@@ -296,19 +296,20 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     return () => clearTimeout(timer);
   }, [tourActive, tourIndex, detailsOpen]);
   const [creating, setCreating] = useState<'lifestyle' | 'subject' | null>(null);
-  // Selector v3 (developer 2026-09-12, second round). Two layers:
-  //   pinnedLifestyle — the box a CLICK opened. It holds the LIST open and
-  //     only moves when another lifestyle is clicked (or a selection
-  //     collapses everything). Native taps always pin.
-  //   hoverPreview — the box the mouse is over right now (web only). It
-  //     previews IN FRONT of the pin: hover another box and it opens,
-  //     hover off and the view falls BACK to the pinned box — never all
-  //     the way down to the collapsed summary.
-  // Selection only ever happens on a click: a subject, or a second click
-  // on the pinned lifestyle itself.
-  const [pinnedLifestyle, setPinnedLifestyle] = useState<string | null>(null);
-  const [hoverPreview, setHoverPreview] = useState<string | null>(null);
-  const openLifestyle = hoverPreview ?? pinnedLifestyle;
+  // Selector v4 — the filing cabinet (developer 2026-09-12, third round).
+  //   menuOpen — whether the CABINET (the list of every lifestyle) is out.
+  //     Clicking the collapsed summary opens it, and it stays open no
+  //     matter where the mouse goes. Only a selection (or deselect into
+  //     the always-open no-selection list) puts it away.
+  //   openDrawer — the one lifestyle whose subjects are showing. On the
+  //     computer the MOUSE drives it: hover a box and its drawer slides
+  //     out, hover off and it slides back in, sweep across the list and
+  //     they flicker one by one. On the phone a first tap opens a drawer.
+  // Hover never selects or deselects anything. Clicking a lifestyle
+  // selects it (or deselects the one already chosen), clicking a subject
+  // selects lifestyle + subject.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [openDrawer, setOpenDrawer] = useState<string | null>(null);
   // Lifestyle whose inline name+color editor is open (the pencil button).
   const [editingLifestyle, setEditingLifestyle] = useState<string | null>(null);
   // Options created in this session, so they render immediately (they
@@ -509,8 +510,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
         setCategory(null);
         setSubject(null);
       }
-      if (pinnedLifestyle === option.name) setPinnedLifestyle(null);
-      if (hoverPreview === option.name) setHoverPreview(null);
+      if (openDrawer === option.name) setOpenDrawer(null);
       if (editingLifestyle === option.name) setEditingLifestyle(null);
       if (inUse > 0) deleteCategory.mutate(option.name);
     } else {
@@ -526,47 +526,35 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     toast.show({ message: `${kind === 'lifestyle' ? 'Lifestyle' : 'Subject'} deleted.` });
   }
 
-  // Selector v2 interactions (developer spec 2026-09-09).
+  // Selector v4 interactions (the filing cabinet, developer 2026-09-12).
   const lifestyleUsedColors = groups.map((g) => g.color);
 
   function onLifestyleTap(g: { name: string; color: string }) {
     animateListChanges();
-    if (pinnedLifestyle !== g.name) {
-      // First CLICK on a box — including one the mouse merely previewed —
-      // pins it open without selecting anything (developer 2026-09-12:
-      // selection only ever happens on a click, and the first click is
-      // the open). Clicking another lifestyle moves the pin here.
-      setPinnedLifestyle(g.name);
-      setHoverPreview(null);
+    // Phones have no hover, so the first tap slides the drawer out to show
+    // the subjects — the second tap selects. On the computer the mouse
+    // already opened it, so a click always commits.
+    if (!isWeb && openDrawer !== g.name) {
+      setOpenDrawer(g.name);
       setCreating(null);
       setEditingLifestyle(null);
       return;
     }
-    if (category?.name === g.name) {
-      if (subject) {
-        // A subject is picked (e.g. just created, box left open): the
-        // lifestyle tap simply CLOSES the box and keeps the pick —
-        // deselecting goes through the subject chip or another lifestyle.
-        setPinnedLifestyle(null);
-        setHoverPreview(null);
-        setCreating(null);
-        setEditingLifestyle(null);
-        return;
-      }
-      // Re-opened the selected lifestyle and tapped it again: deselect.
+    if (category?.name === g.name && !subject) {
+      // Clicking the lifestyle that's already chosen on its own: deselect.
+      // The cabinet stays out (no selection means the list shows anyway).
       setCategory(null);
       setSubject(null);
-      setPinnedLifestyle(null);
-      setHoverPreview(null);
       setCreating(null);
       setEditingLifestyle(null);
       return;
     }
-    // Second click on the pinned box: confirm lifestyle-only.
+    // Select (or reselect) lifestyle-only — the cabinet closes into the
+    // collapsed summary.
     setCategory({ name: g.name, color: g.color });
     setSubject(null);
-    setPinnedLifestyle(null);
-    setHoverPreview(null);
+    setMenuOpen(false);
+    setOpenDrawer(null);
     setCreating(null);
     setEditingLifestyle(null);
     emitTourEvent('form-category-set');
@@ -575,9 +563,9 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
   function onSubjectTap(g: { name: string; color: string }, s: NamedColor) {
     animateListChanges();
     if (subject?.name === s.name) {
-      // Tapping the selected subject drops the whole pick back to preview
-      // (developer 2026-09-09: after unselecting the subject, one more tap
-      // on the lifestyle is what confirms a lifestyle-only choice).
+      // Tapping the selected subject clears the pick — the cabinet stays
+      // out (nothing selected, the list keeps showing) so one click on a
+      // lifestyle can take it on its own (the tour walks this).
       setSubject(null);
       setCategory(null);
       emitTourEvent('form-subject-cleared');
@@ -585,8 +573,8 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     }
     setCategory({ name: g.name, color: g.color });
     setSubject(s);
-    setPinnedLifestyle(null);
-    setHoverPreview(null);
+    setMenuOpen(false);
+    setOpenDrawer(null);
     setCreating(null);
     setEditingLifestyle(null);
     emitTourEvent('form-category-set');
@@ -594,16 +582,15 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
   }
 
   // Creating a subject through the +new creator selects it but LEAVES the
-  // box open (like lifestyle creation) — the tour walks straight into
+  // cabinet out with the drawer open — the tour walks straight into
   // unselecting it, and seeing the chip you just made beats a collapse.
   function onSubjectCreated(g: { name: string; color: string }, s: NamedColor) {
     animateListChanges();
     updateCatalog((current) => catalogUpsertSubject(current, { name: g.name, color: g.color }, s));
     setCategory({ name: g.name, color: g.color });
     setSubject(s);
-    // Deterministically keep the box open post-creation (the tour walks
-    // straight into unselecting the new chip).
-    setPinnedLifestyle(g.name);
+    setMenuOpen(true);
+    setOpenDrawer(g.name);
     setCreating(null);
     emitTourEvent('form-category-set');
     emitTourEvent('form-subject-set');
@@ -624,24 +611,23 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     });
     if (category?.name === from) setCategory(option);
     setEditingLifestyle(null);
-    setPinnedLifestyle(option.name);
-    setHoverPreview(null);
+    setOpenDrawer(option.name);
     toast.show({ message: 'Lifestyle updated.' });
   }
 
-  /** Web only: mouse hover drives the transient PREVIEW layer (raw DOM
-   *  handlers - RNW Pressable onHoverIn is unreliable with nested
-   *  pressables, the round-4 lesson). The preview sits in front of the
-   *  pin: hover any box to peek into it, hover off and the view falls
-   *  back to the pinned box — never past it to the collapsed summary
-   *  (developer 2026-09-12 round 2). Creating/editing freezes the peek. */
+  /** Web only: the mouse drives the drawers (raw DOM handlers - RNW
+   *  Pressable onHoverIn is unreliable with nested pressables, the round-4
+   *  lesson). Hover a box and its subjects slide out, hover off and they
+   *  slide back in, sweep the list and the drawers flicker one by one —
+   *  the cabinet itself never moves. Hover never selects. Creating or
+   *  editing inside a drawer holds it open. */
   function webHoverProps(name: string) {
     if (!isWeb) return {};
     return {
-      onMouseEnter: () => setHoverPreview(name),
+      onMouseEnter: () => setOpenDrawer(name),
       onMouseLeave: () => {
         if (creating === 'subject' || editingLifestyle) return;
-        setHoverPreview((h) => (h === name ? null : h));
+        setOpenDrawer((h) => (h === name ? null : h));
       },
     } as Record<string, unknown>;
   }
@@ -991,21 +977,21 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
               </View>
               </TourAnchor>
 
-              {/* THE LIFESTYLE SELECTOR v2 (developer spec 2026-09-09).
-                  Tap once = HOVER: the box opens and previews its subjects
-                  (on the computer, mouse hover does this by itself, and
-                  hover-off closes it). While hovered: tap a subject to
-                  confirm lifestyle+subject, or tap the lifestyle again to
-                  confirm lifestyle-only. Confirming collapses the rest away
-                  (animated), leaving the stacked summary. Re-opening the
-                  selected lifestyle and tapping it again clears the
-                  selection. Tapping the selected subject unselects just the
-                  subject. The pencil edits a lifestyle's name and color. */}
+              {/* THE LIFESTYLE SELECTOR v4 — the filing cabinet (developer
+                  2026-09-12). Clicking the collapsed summary pulls the
+                  cabinet out and it STAYS out. On the computer the mouse
+                  slides individual drawers open and closed as it sweeps
+                  the list (hover never selects anything); on the phone a
+                  first tap opens a drawer. Clicking a lifestyle selects it
+                  on its own (clicking the currently chosen one deselects),
+                  clicking a subject selects lifestyle + subject, and
+                  either selection closes the cabinet into the summary.
+                  The pencil edits a lifestyle's name and color. */}
               <TourAnchor ringPadX={FORM_RING_X} ringPadY={FORM_RING_Y} id="form-lifestyle">
               <View style={{ gap: space.s2 }}>
               <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Lifestyle</Text>
               <View style={{ gap: space.s2 }}>
-                {category && openLifestyle === null ? (
+                {category && !menuOpen ? (
                   // STACKED summary: the chosen subject (or lifestyle) with
                   // the lifestyle's color bar peeking at the top.
                   <RightClickMenu
@@ -1013,7 +999,8 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                       {
                         label: `Edit lifestyle “${category.name}”`,
                         onPress: () => {
-                          setPinnedLifestyle(category.name);
+                          setMenuOpen(true);
+                          setOpenDrawer(category.name);
                           setEditingLifestyle(category.name);
                         },
                       },
@@ -1025,9 +1012,11 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                   <Pressable
                     onPress={() => {
                       animateListChanges();
-                      // A click opened it — pinned, so it shows the full
-                      // menu and survives mouse hover-off.
-                      setPinnedLifestyle(category.name);
+                      // Clicking the summary pulls the cabinet out — it
+                      // stays out until something is selected. The chosen
+                      // lifestyle's drawer starts open as a landmark.
+                      setMenuOpen(true);
+                      setOpenDrawer(category.name);
                     }}
                     onLongPress={() =>
                       removeOption(subject ? 'subject' : 'lifestyle', subject ?? category)
@@ -1056,7 +1045,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                   // opens (CollapsibleReveal animates the expand/collapse).
                   <View style={{ gap: space.s2 }}>
                     {groups.map((g) => {
-                      const open = openLifestyle === g.name;
+                      const open = openDrawer === g.name;
                       const isChosen = category?.name === g.name;
                       return (
                         <RightClickMenu
@@ -1065,7 +1054,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                             {
                               label: `Edit lifestyle “${g.name}”`,
                               onPress: () => {
-                                setPinnedLifestyle(g.name);
+                                setOpenDrawer(g.name);
                                 setEditingLifestyle(g.name);
                               },
                             },
@@ -1090,7 +1079,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                               accessibilityState={{ selected: isChosen, expanded: open }}
                               accessibilityLabel={
                                 open
-                                  ? `Lifestyle ${g.name} open. Tap ${isChosen ? 'to clear the selection' : 'again to select it'}, or pick a subject.`
+                                  ? `Lifestyle ${g.name} open. Tap ${isChosen && !subject ? 'to clear the selection' : 'to select it'}, or pick a subject.`
                                   : `Lifestyle ${g.name}, ${g.subjects.length} subjects. Tap to open.`
                               }
                               style={{ flex: 1 }}>
@@ -1197,10 +1186,11 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                           animateListChanges();
                           setCategory(option);
                           setSubject(null);
-                          // Leave the new lifestyle OPEN so its ＋new subject
-                          // chip is right there (the tour walks into it).
-                          setPinnedLifestyle(option.name);
-                          setHoverPreview(null);
+                          // Leave the cabinet out with the new lifestyle's
+                          // drawer open so its ＋new subject chip is right
+                          // there (the tour walks into it).
+                          setMenuOpen(true);
+                          setOpenDrawer(option.name);
                           setCreating(null);
                           emitTourEvent('form-category-set');
                         }}

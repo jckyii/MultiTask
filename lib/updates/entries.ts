@@ -21,7 +21,7 @@ export const UPDATE_ENTRIES: UpdateEntry[] = [
       'On the computer, hovering a lifestyle only previews its subjects now, and moving the mouse away never changes your pick. Clicking a lifestyle keeps its menu open until you click another one, and selecting always takes a click, either on a subject or a second click on the lifestyle itself.',
       'Lifestyles and subjects are permanent now. They used to quietly disappear once their last task was gone, because they only lived on the tasks themselves. They are remembered on your account, so an empty lifestyle waits for its next task, and deleting one is always your own explicit choice.',
       'Prioritised tasks now gather in their own Priority section at the top of the task list, ranked 1st to 3rd, instead of being mixed into the date groups.',
-      'When a lifestyle is open on the computer, hovering another one peeks into it, and moving the mouse away returns to the open lifestyle instead of collapsing everything.',
+      'The lifestyle menu works like a filing cabinet on the computer now. Tapping your selection opens the full menu and it stays open, sweeping the mouse across it slides each lifestyle open and closed to show its subjects, and only a click selects, a lifestyle on its own or a subject inside one.',
     ],
   },
   {
