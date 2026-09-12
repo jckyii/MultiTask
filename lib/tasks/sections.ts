@@ -5,7 +5,15 @@
 
 import type { Task } from './types';
 
-export type SectionKey = 'overdue' | 'today' | 'tomorrow' | 'upcoming' | 'noDueDate' | 'completed' | 'deleted';
+export type SectionKey =
+  | 'priority'
+  | 'overdue'
+  | 'today'
+  | 'tomorrow'
+  | 'upcoming'
+  | 'noDueDate'
+  | 'completed'
+  | 'deleted';
 
 export type TaskSection = {
   key: SectionKey;
@@ -14,6 +22,7 @@ export type TaskSection = {
 };
 
 const SECTION_TITLES: Record<SectionKey, string> = {
+  priority: 'Priority',
   overdue: 'Overdue',
   today: 'Today',
   tomorrow: 'Tomorrow',
@@ -42,8 +51,20 @@ function byDueThenPriority(a: Task, b: Task): number {
   return (a.priority ?? Number.MAX_SAFE_INTEGER) - (b.priority ?? Number.MAX_SAFE_INTEGER);
 }
 
+/** Priority section order: 1st before 2nd before 3rd, earlier due date
+ *  breaking ties (dateless last). */
+function byPriorityThenDue(a: Task, b: Task): number {
+  const rankDiff = (a.priority ?? Number.MAX_SAFE_INTEGER) - (b.priority ?? Number.MAX_SAFE_INTEGER);
+  if (rankDiff !== 0) return rankDiff;
+  return (
+    (a.dueDate?.getTime() ?? Number.MAX_SAFE_INTEGER) -
+    (b.dueDate?.getTime() ?? Number.MAX_SAFE_INTEGER)
+  );
+}
+
 export function groupTasks(tasks: Task[], now: Date = new Date()): TaskSection[] {
   const buckets: Record<SectionKey, Task[]> = {
+    priority: [],
     overdue: [],
     today: [],
     tomorrow: [],
@@ -60,6 +81,10 @@ export function groupTasks(tasks: Task[], now: Date = new Date()): TaskSection[]
   for (const task of tasks) {
     if (task.deletedAt) buckets.deleted.push(task);
     else if (task.isCompleted) buckets.completed.push(task);
+    // Every open prioritised task lives in the Priority section at the top
+    // instead of its date group (developer 2026-09-12) — they're ranked by
+    // hand, so they must never be mixed in with the rest.
+    else if (task.priority != null) buckets.priority.push(task);
     else if (!task.dueDate) buckets.noDueDate.push(task);
     else if (task.dueDate.getTime() < now.getTime()) buckets.overdue.push(task);
     else if (task.dueDate.getTime() < tomorrowStart.getTime()) buckets.today.push(task);
@@ -68,14 +93,15 @@ export function groupTasks(tasks: Task[], now: Date = new Date()): TaskSection[]
   }
 
   // Completed sits at the TOP and Deleted (trash) at the BOTTOM, both
-  // collapsed by default in the UI, so the active list between them reads
-  // strictly by time — developer decisions, 2026-07-09/10.
-  const order: SectionKey[] = ['completed', 'overdue', 'today', 'tomorrow', 'upcoming', 'noDueDate', 'deleted'];
+  // collapsed by default in the UI. Priority leads the active list, and
+  // the date groups after it read strictly by time — developer decisions,
+  // 2026-07-09/10 + 2026-09-12.
+  const order: SectionKey[] = ['completed', 'priority', 'overdue', 'today', 'tomorrow', 'upcoming', 'noDueDate', 'deleted'];
   return order
     .filter((key) => buckets[key].length > 0)
     .map((key) => ({
       key,
       title: SECTION_TITLES[key],
-      data: buckets[key].sort(byDueThenPriority),
+      data: buckets[key].sort(key === 'priority' ? byPriorityThenDue : byDueThenPriority),
     }));
 }

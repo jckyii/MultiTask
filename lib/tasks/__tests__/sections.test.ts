@@ -67,17 +67,24 @@ describe('groupTasks', () => {
     expect(sections.map((s) => s.key)).toEqual(['today']);
   });
 
-  test('within a section: earlier due first, priority breaks ties', () => {
+  test('prioritised tasks gather in a Priority section at the top (2026-09-12)', () => {
     const at18 = new Date(2026, 6, 15, 18, 0);
     const sections = groupTasks(
       [
         task({ title: 'no-prio', dueDate: at18 }),
         task({ title: 'second', dueDate: at18, priority: 2 }),
-        task({ title: 'first', dueDate: at18, priority: 1 }),
+        task({ title: 'first-late', dueDate: new Date(2026, 6, 20, 9, 0), priority: 1 }),
+        task({ title: 'first-early', dueDate: at18, priority: 1 }),
         task({ title: 'earlier', dueDate: new Date(2026, 6, 15, 14, 0) }),
+        // Completed/deleted prioritised tasks stay in their own groups.
+        task({ title: 'done-first', dueDate: at18, priority: 1, isCompleted: true }),
       ],
       NOW
     );
-    expect(sections[0].data.map((t) => t.title)).toEqual(['earlier', 'first', 'second', 'no-prio']);
+    expect(sections.map((s) => [s.key, s.data.map((t) => t.title)])).toEqual([
+      ['completed', ['done-first']],
+      ['priority', ['first-early', 'first-late', 'second']],
+      ['today', ['earlier', 'no-prio']],
+    ]);
   });
 });
