@@ -37,6 +37,16 @@ import { confirmDialog } from '@/lib/confirm';
 import { TASK_DESCRIPTION_MAX, TASK_TITLE_MAX } from '@/lib/limits';
 import { endOfToday } from '@/lib/tasks/dates';
 import { lifestyleGroups } from '@/lib/tasks/lifestyles';
+import {
+  catalogIsMissing,
+  catalogRemoveLifestyle,
+  catalogRemoveSubject,
+  catalogRenameLifestyle,
+  catalogUpsertLifestyle,
+  catalogUpsertSubject,
+  mergeGroups,
+} from '@/lib/tasks/lifestyle-catalog';
+import { useLifestyleCatalog } from '@/hooks/use-lifestyle-catalog';
 import { useDeleteCategory, useDeleteSubject, useTasks, useUpdateCategoryStyle } from '@/lib/tasks/use-tasks';
 import { useWideNative } from '@/hooks/use-wide-layout';
 import { tabletSheet } from '@/lib/theme/layout';
@@ -308,15 +318,30 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     new Map()
   );
 
-  // The lifestyle hierarchy, data-driven from the user's real tasks
-  // (lib/tasks/lifestyles.ts) plus this session's creations.
+  // The lifestyle hierarchy: the PERSISTENT catalog (auth metadata — it
+  // outlives its tasks, developer 2026-09-12) merged with what the user's
+  // real tasks carry, plus this session's creations.
   const { data: tasks } = useTasks();
+  const { catalog, updateCatalog } = useLifestyleCatalog();
   const deleteCategory = useDeleteCategory();
   const updateCategoryStyle = useUpdateCategoryStyle();
   const deleteSubject = useDeleteSubject();
   const toast = useUndoToast();
+
+  // Adopt anything on tasks the catalog doesn't know yet (once per open) —
+  // existing lifestyles become persistent the first time this form loads,
+  // and offline-created ones self-heal into the catalog later.
+  const adopted = useRef(false);
+  useEffect(() => {
+    if (adopted.current || !tasks) return;
+    const derived = lifestyleGroups(tasks);
+    if (!catalogIsMissing(catalog, derived)) return;
+    adopted.current = true;
+    updateCatalog((current) => mergeGroups(current, derived));
+  }, [tasks, catalog, updateCatalog]);
+
   const groups = useMemo(() => {
-    const derived = lifestyleGroups(tasks ?? []);
+    const derived = mergeGroups(catalog, lifestyleGroups(tasks ?? []));
     const byName = new Map(derived.map((g) => [g.name, { ...g, subjects: [...g.subjects] }]));
     for (const extra of extraLifestyles) {
       if (!byName.has(extra.name)) byName.set(extra.name, { name: extra.name, color: extra.color, subjects: [] });
@@ -330,7 +355,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
       group.subjects.sort((a, b) => a.name.localeCompare(b.name));
     }
     return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [tasks, extraLifestyles, extraSubjectsByLifestyle]);
+  }, [tasks, catalog, extraLifestyles, extraSubjectsByLifestyle]);
 
   // Sheet surface stays anchored to the screen bottom and pads itself by the
   // keyboard height — no backdrop gap under the box.
@@ -452,11 +477,11 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     close();
   }
 
-  // Long-press a lifestyle box or subject chip to delete it. These aren't
-  // their own records (just the distinct values across your tasks), so
-  // deleting clears it off every task that carries it — the confirm says
-  // how many. Deleting a lifestyle also clears its subjects on those tasks
-  // (a subject can't exist without a lifestyle).
+  // Long-press a lifestyle box or subject chip to delete it: the entry
+  // leaves the persistent catalog AND is cleared off every task that
+  // carries it — the confirm says how many. Deleting a lifestyle also
+  // clears its subjects on those tasks (a subject can't exist without a
+  // lifestyle).
   async function removeOption(kind: 'lifestyle' | 'subject', option: NamedColor) {
     const inUse = (tasks ?? []).filter((t) =>
       kind === 'lifestyle' ? t.category === option.name : t.subject === option.name
@@ -472,6 +497,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
     });
     if (!confirmed) return;
     if (kind === 'lifestyle') {
+      updateCatalog((current) => catalogRemoveLifestyle(current, option.name));
       setExtraLifestyles((prev) => prev.filter((c) => c.name !== option.name));
       setExtraSubjectsByLifestyle((prev) => {
         const next = new Map(prev);
@@ -489,6 +515,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
       if (editingLifestyle === option.name) setEditingLifestyle(null);
       if (inUse > 0) deleteCategory.mutate(option.name);
     } else {
+      updateCatalog((current) => catalogRemoveSubject(current, option.name));
       setExtraSubjectsByLifestyle((prev) => {
         const next = new Map(prev);
         for (const [k, list] of next) next.set(k, list.filter((s) => s.name !== option.name));
@@ -572,6 +599,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
   // unselecting it, and seeing the chip you just made beats a collapse.
   function onSubjectCreated(g: { name: string; color: string }, s: NamedColor) {
     animateListChanges();
+    updateCatalog((current) => catalogUpsertSubject(current, { name: g.name, color: g.color }, s));
     setCategory({ name: g.name, color: g.color });
     setSubject(s);
     setCreating(null);
@@ -580,6 +608,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
   }
 
   function saveLifestyleEdit(from: string, option: NamedColor) {
+    updateCatalog((current) => catalogRenameLifestyle(current, from, option));
     updateCategoryStyle.mutate({ from, name: option.name, color: option.color });
     setExtraLifestyles((prev) => prev.map((x) => (x.name === from ? option : x)));
     setExtraSubjectsByLifestyle((prev) => {
@@ -1167,6 +1196,7 @@ export function TaskFormSheet({ submitLabel, autoFocusTitle = false, initial, on
                         usedColors={lifestyleUsedColors}
                         onFocusScroll={scrollToPalette}
                         onCreate={(option) => {
+                          updateCatalog((current) => catalogUpsertLifestyle(current, option));
                           setExtraLifestyles((prev) => [...prev, option]);
                           animateListChanges();
                           setCategory(option);

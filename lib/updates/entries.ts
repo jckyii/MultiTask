@@ -19,6 +19,7 @@ export const UPDATE_ENTRIES: UpdateEntry[] = [
     title: 'Picking lifestyles on the computer',
     points: [
       'On the computer, hovering a lifestyle only previews its subjects now, and moving the mouse away never changes your pick. Clicking a lifestyle keeps its menu open until you click another one, and selecting always takes a click, either on a subject or a second click on the lifestyle itself.',
+      'Lifestyles and subjects are permanent now. They used to quietly disappear once their last task was gone, because they only lived on the tasks themselves. They are remembered on your account, so an empty lifestyle waits for its next task, and deleting one is always your own explicit choice.',
     ],
   },
   {
