@@ -7,7 +7,8 @@
 // Geometry comes entirely from the tested layout engine
 // (lib/tasks/day-timeline.ts); this file renders rectangles and wires presses.
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable as GHPressable } from 'react-native-gesture-handler';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import type { CalendarEvent } from '@/lib/events/use-events';
@@ -24,6 +25,14 @@ import { useTheme } from '@/lib/theme/use-theme';
 /** Exported for the day page's initial-scroll math (scroll to the first
  *  item once the axis stopped compressing empty hours). */
 export const DAY_TIMELINE_PX_PER_HOUR = 64;
+
+// Native blocks use gesture-handler's Pressable so the day page's swipe
+// pan can CANCEL them on activation (developer report 2026-09-13: a swipe
+// that started on an event still opened its detail sheet on release —
+// plain RN Pressables never hear about an RNGH pan taking over). A real
+// stationary tap still presses; web keeps the RN Pressable (no touch pan
+// there, and the hover/aria behavior stays byte-identical).
+const BlockPressable = Platform.OS === 'web' ? Pressable : GHPressable;
 
 const CONFIG: TimelineConfig = {
   pxPerHour: DAY_TIMELINE_PX_PER_HOUR,
@@ -149,7 +158,7 @@ export function DayTimeline(props: Props) {
           const clusterWidth = block.shared ? 56 : 100;
           const laneWidth = clusterWidth / block.cols;
           return (
-            <Pressable
+            <BlockPressable
               key={`e-${block.id}`}
               onPress={() => onPressEvent(event)}
               accessibilityRole="button"
@@ -189,7 +198,7 @@ export function DayTimeline(props: Props) {
                   </Text>
                 )}
               </View>
-            </Pressable>
+            </BlockPressable>
           );
         })}
 
@@ -218,7 +227,7 @@ export function DayTimeline(props: Props) {
                   borderColor: colors.borderSubtle,
                 },
               ]}>
-              <Pressable
+              <BlockPressable
                 onPress={() => merged?.onPressTask(task)}
                 accessibilityRole="button"
                 accessibilityLabel={`${task.title}, ${done ? 'completed' : status}`}
@@ -262,8 +271,8 @@ export function DayTimeline(props: Props) {
                     </Text>
                   </View>
                 </View>
-              </Pressable>
-              <Pressable
+              </BlockPressable>
+              <BlockPressable
                 onPress={() => merged?.onToggleTask(task)}
                 hitSlop={8}
                 accessibilityRole="button"
@@ -274,7 +283,7 @@ export function DayTimeline(props: Props) {
                   size={22}
                   color={done ? colors.textTertiary : accent}
                 />
-              </Pressable>
+              </BlockPressable>
             </View>
           );
         })}

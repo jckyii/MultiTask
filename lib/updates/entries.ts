@@ -15,6 +15,13 @@ export type UpdateEntry = {
 
 export const UPDATE_ENTRIES: UpdateEntry[] = [
   {
+    date: 'September 13, 2026',
+    title: 'Swipes win over taps',
+    points: [
+      'On the phone, swiping between days no longer opens the event or task your finger happened to start on. The moment a swipe gets going, the tap underneath is cancelled, and only a real tap opens things.',
+    ],
+  },
+  {
     date: 'September 12, 2026',
     title: 'Picking lifestyles on the computer',
     points: [

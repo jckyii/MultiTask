@@ -2,11 +2,18 @@
 // event-accent blue, dashed border instead of a solid status bar, no pills,
 // no swipe actions). Events are a schedule, not a to-do: nothing to
 // complete, nothing to edit.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable as GHPressable } from 'react-native-gesture-handler';
 
 import type { CalendarEvent } from '@/lib/events/use-events';
 import { readableTextColor } from '@/lib/theme/pill-colors';
 import { useTheme } from '@/lib/theme/use-theme';
+
+// Native uses gesture-handler's Pressable so page-swipe pans (the day
+// view, the tab pager) CANCEL the press when they activate — a swipe that
+// starts on an event card must never open its detail sheet (developer
+// report 2026-09-13). Web keeps the RN Pressable untouched.
+const CardPressable = Platform.OS === 'web' ? Pressable : GHPressable;
 
 export function eventTimeLabel(event: CalendarEvent): string {
   if (event.allDay) return 'All day';
@@ -35,7 +42,7 @@ export function EventCard({
   const timeColor = event.color ? readableTextColor(event.color, isDark) : colors.statusEventAccent;
   const hasNotes = !!event.notes;
   return (
-    <Pressable
+    <CardPressable
       onPress={onPress && (() => onPress(event))}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={`Event: ${event.title}, ${timeLabel(event)}`}
@@ -76,7 +83,7 @@ export function EventCard({
           </Text>
         )}
       </View>
-    </Pressable>
+    </CardPressable>
   );
 }
 
