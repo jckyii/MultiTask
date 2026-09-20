@@ -15,6 +15,17 @@ export type UpdateEntry = {
 
 export const UPDATE_ENTRIES: UpdateEntry[] = [
   {
+    date: 'September 20, 2026',
+    title: 'Sort by lifestyle, the board',
+    points: [
+      'The task list can now be sorted by lifestyle. A Sort by dropdown sits next to the Tasks title, and picking Lifestyle turns the page into a board: every lifestyle is a headed group, every subject is its own tall column, and lifestyle only tasks gather in a Miscellaneous column at the end. Empty subjects still show, so nothing is hidden.',
+      'Board cards are compact on purpose, just the title and date. Prioritised tasks sit at the top of their column with a small gap before the rest, and everything else orders by date. Columns scroll on their own, the whole board scrolls sideways, and holding ctrl while scrolling steers it left and right on the computer.',
+      'Completing on the board has its own animation. The card shrinks into a green line that slips down the edge of the subject column and vanishes at the bottom. Deleting does the same down the left side in red. Completed and deleted tasks collect underneath the board.',
+      'On the phone the board is a carousel, one column at a time, swiping like the home screen. The bar at the top lists every lifestyle and subject so you can jump straight to any of them.',
+      'The calendar remembers your view now. Leave it in week blocks or the week list and it will be exactly there when you come back, even after signing in again.',
+    ],
+  },
+  {
     date: 'September 13, 2026',
     title: 'Swipes win over taps',
     points: [

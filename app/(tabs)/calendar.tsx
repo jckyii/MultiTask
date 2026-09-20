@@ -4,8 +4,9 @@
 // in the top bar zooms out to a scrolling year view (12 blocks per year);
 // tapping a month scrolls the month view there. Tap a day to drill into its
 // task list. Fixed 6-week month grids keep scroll positions exact.
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -104,6 +105,20 @@ export default function CalendarScreen() {
   // blocks ⇄ list — the separate format button (and its persisted pick,
   // 2026-08-18) is gone; a calendar icon beside it exits to the month.
   const [weekFormat, setWeekFormat] = useState<'blocks' | 'list'>('blocks');
+  // The chosen view SURVIVES leaving the page and signing back in
+  // (developer 2026-09-20): month, week blocks, or week list, restored on
+  // mount and saved on every change.
+  useEffect(() => {
+    void AsyncStorage.getItem('ui.calendarView').then((stored) => {
+      if (stored === 'blocks' || stored === 'list') {
+        setWeekView(true);
+        setWeekFormat(stored);
+      }
+    });
+  }, []);
+  useEffect(() => {
+    void AsyncStorage.setItem('ui.calendarView', weekView ? weekFormat : 'month');
+  }, [weekView, weekFormat]);
   const [weekOffset, setWeekOffset] = useState(0);
   // Tapping the week range opens a jump-to-week picker (developer request
   // 2026-08-02). It opens SCROLLED TO the week you're viewing — not the top

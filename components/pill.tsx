@@ -26,8 +26,9 @@ export function Pill({ label, color }: { label: string; color: string }) {
  *  overlap of two pastel pills). Subject-less tasks fall back to the plain
  *  lifestyle pill. */
 /** Black-or-white for text sitting ON a solid user color (the pastel
- *  pillColors math is for tinted surfaces, not raw fills). */
-function textOnSolid(hex: string): string {
+ *  pillColors math is for tinted surfaces, not raw fills). Exported for
+ *  the board's solid lifestyle chips. */
+export function textOnSolid(hex: string): string {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
   if (!m) return '#FFFFFF';
   const n = parseInt(m[1], 16);

@@ -2,6 +2,7 @@
 // Overdue / Today / Tomorrow / Upcoming / No due date by time, Deleted
 // (collapsed trash) at the bottom. Swipeable cards, optimistic mutations,
 // undo toasts, spring regroup animations. Quick-add FAB is the next slice.
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -14,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BoardView } from '@/components/board-view';
 import { Fab } from '@/components/fab';
 import { TabPage } from '@/components/tab-pager';
 import { SearchFilterBar } from '@/components/search-filter-bar';
@@ -60,6 +62,22 @@ export default function TaskListScreen() {
   const [completedCollapsed, toggleCompleted] = useCollapsedSection('ui.completedCollapsed');
   const [deletedCollapsed, toggleDeleted] = useCollapsedSection('ui.deletedCollapsed');
   const urgencyThresholdHours = useUrgencyThreshold();
+
+  // Sort by (developer featured idea 2026-09-20): Date is the classic
+  // sectioned list, Lifestyle is the Notion-style board. Persisted, with a
+  // small dropdown beside the title.
+  const [sortMode, setSortMode] = useState<'date' | 'lifestyle'>('date');
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  useEffect(() => {
+    void AsyncStorage.getItem('ui.tasksSort').then((stored) => {
+      if (stored === 'lifestyle') setSortMode('lifestyle');
+    });
+  }, []);
+  function chooseSort(mode: 'date' | 'lifestyle') {
+    setSortMenuOpen(false);
+    setSortMode(mode);
+    void AsyncStorage.setItem('ui.tasksSort', mode);
+  }
 
   // Search + filter. On PHONES: not rendered until deliberately revealed —
   // an overscroll pull at the top, or the magnifier button (developer: keep
@@ -308,8 +326,46 @@ export default function TaskListScreen() {
       {/* The SCROLLABLE spans the window (scrollbar at the true edge; swipe
           exits travel the full viewport) — content centers itself via
           pageContent inside contentContainerStyle. */}
-      <View ref={listAnchor.ref} onLayout={listAnchor.onLayout} style={[styles.titleRow, pageContent, { paddingHorizontal: space.s4, paddingVertical: space.s3 }]}>
-        <Text style={[type.h1, { color: colors.textPrimary }]}>Tasks</Text>
+      <View ref={listAnchor.ref} onLayout={listAnchor.onLayout} style={[styles.titleRow, pageContent, { paddingHorizontal: space.s4, paddingVertical: space.s3, zIndex: 20 }]}>
+        <View style={styles.titleLeft}>
+          <Text style={[type.h1, { color: colors.textPrimary }]}>Tasks</Text>
+          {/* Sort by: Date (the classic sections) or Lifestyle (the board). */}
+          <View style={styles.sortWrap}>
+            <Pressable
+              onPress={() => setSortMenuOpen((open) => !open)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: sortMenuOpen }}
+              accessibilityLabel={`Sort by ${sortMode === 'date' ? 'date' : 'lifestyle'}. Change sorting.`}
+              style={[styles.sortButton, { borderColor: colors.borderSubtle, backgroundColor: colors.surfaceElevated }]}>
+              <Text style={[type.caption, { color: colors.textSecondary, fontWeight: '400' }]}>Sort by:</Text>
+              <Text style={[type.caption, { color: colors.textPrimary }]}>
+                {sortMode === 'date' ? 'Date' : 'Lifestyle'}
+              </Text>
+              <IconSymbol name="chevron.down" size={12} color={colors.textSecondary} />
+            </Pressable>
+            {sortMenuOpen && (
+              <View
+                style={[
+                  styles.sortMenu,
+                  { backgroundColor: colors.surfaceElevated, borderColor: colors.borderSubtle },
+                ]}>
+                {(['date', 'lifestyle'] as const).map((mode) => (
+                  <Pressable
+                    key={mode}
+                    onPress={() => chooseSort(mode)}
+                    accessibilityRole="menuitem"
+                    style={({ pressed }) => [styles.sortItem, pressed && { backgroundColor: colors.surfaceSunken }]}>
+                    <Text style={[type.body, { color: sortMode === mode ? colors.accent : colors.textPrimary }]}>
+                      {mode === 'date' ? 'Date' : 'Lifestyle'}
+                    </Text>
+                    {sortMode === mode && <IconSymbol name="checkmark" size={14} color={colors.accent} />}
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
         {/* The theme toggle is ALWAYS the outermost top-right control on
             every tab (developer request) — other actions sit to its left. */}
         <View style={styles.titleActions}>
@@ -341,6 +397,14 @@ export default function TaskListScreen() {
             <Text style={[type.body, { color: colors.accent }]}>Retry</Text>
           </Pressable>
         </View>
+      ) : sortMode === 'lifestyle' ? (
+        <BoardView
+          tasks={tasks ?? []}
+          onPressTask={(t) => router.push(`/task/${t.id}`)}
+          onComplete={handleSwipeRight}
+          onDelete={handleSwipeLeft}
+          bottomInset={insets.bottom + space.s6 * 2}
+        />
       ) : (
         <SectionList
           sections={sections}
@@ -454,6 +518,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  titleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexShrink: 1,
+  },
+  sortWrap: {
+    position: 'relative',
+    zIndex: 30,
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  sortMenu: {
+    position: 'absolute',
+    top: '110%',
+    left: 0,
+    minWidth: 150,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 4,
+    zIndex: 40,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  sortItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    minHeight: 40,
   },
   titleActions: {
     flexDirection: 'row',
